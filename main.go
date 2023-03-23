@@ -13,7 +13,7 @@ type Action struct {
 
 type compiledAction struct {
 	regex []regexp.Regexp
-	cmd []string
+	cmd   []string
 }
 
 type Stream struct {
@@ -30,8 +30,8 @@ func compileAction(action Action) compiledAction {
 	return ca
 }
 
-/// Handle a log command
-/// Must be started in a goroutine
+// Handle a log command
+// Must be started in a goroutine
 func streamHandle(stream Stream, execQueue chan []string) {
 	log.Printf("streamHandle{%v}: start\n", stream.cmd)
 	cmd := exec.Command(stream.cmd[0], stream.cmd[1:]...)
@@ -78,19 +78,21 @@ func execQueue() chan []string {
 }
 
 func main() {
-	mockstreams := []Stream{Stream{
-		[]string{"tail", "-f", "/home/ao/DOWN"},
-		[]Action{Action{
-			[]string{"prout.dev"},
-			[]string{"touch", "/home/ao/DAMN"},
-		}},
-	}}
-	streams := mockstreams
-	log.Println(streams)
-	queue := execQueue()
-	for _, stream := range streams {
-		go streamHandle(stream, queue)
-	}
-	// Infinite wait
-	<-make(chan bool)
+	conf := parseConf("./reaction.yml")
+	conf = conf
+	// mockstreams := []Stream{Stream{
+	// 	[]string{"tail", "-f", "/home/ao/DOWN"},
+	// 	[]Action{Action{
+	// 		[]string{"prout.dev"},
+	// 		[]string{"touch", "/home/ao/DAMN"},
+	// 	}},
+	// }}
+	// streams := mockstreams
+	// log.Println(streams)
+	// queue := execQueue()
+	// for _, stream := range streams {
+	// 	go streamHandle(stream, queue)
+	// }
+	// // Infinite wait
+	// <-make(chan bool)
 }
