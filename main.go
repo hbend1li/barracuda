@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"log"
+	"time"
 	"os/exec"
 )
 
@@ -49,7 +50,10 @@ func (f *Filter) launch(line *string) {
 }
 
 func (a *Action) launch(line *string) {
-	log.Printf("INFO %s.%s.%s: line {%s} → run {%s}\n", a.streamName, a.filterName, a.name, *line, a.Cmd)
+	if a.afterDuration != 0 {
+		time.Sleep(a.afterDuration)
+	}
+	log.Printf("INFO %s.%s.%s: line {%s} → run %s\n", a.streamName, a.filterName, a.name, *line, a.Cmd)
 
 	cmd := exec.Command(a.Cmd[0], a.Cmd[1:]...)
 	if ret := cmd.Run(); ret != nil {

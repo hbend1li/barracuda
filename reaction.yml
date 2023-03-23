@@ -21,14 +21,3 @@ streams:
           sleepdamn:
             cmd: [ "echo", "sleepDAMN" ]
             after: 2s
-
-  # - cmd: journalctl -fu phpfpm-nextcloud.service
-  #   filters:
-  #     - regex:
-  #         - '"message":"Login failed: .\+ (Remote IP: <ip>)"'
-  #       retry: 3
-  #       retry-period: 1h
-  #       actions:
-  #         - cmd: *iptablesban
-  #         - cmd: *iptablesunban 
-  #           after: 1h
