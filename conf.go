@@ -2,23 +2,49 @@ package main
 
 import (
 	// "flag"
+	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Conf struct {
-	// Definitions []string
-	Streams     []struct {
-		Cmd     string
-		Filters []struct {
-			Regex       []string
-			Retry       uint
-			RetryPeriod string `yaml:"retry-period"`
-			Actions     []struct {
-				Cmd   string
-				After string `yaml:",omitempty"`
+	Streams map[string]Stream
+}
+
+type Stream struct {
+	Cmd     []string
+	Filters map[string]*Filter
+}
+
+type Filter struct {
+	Regex         []string
+	compiledRegex []regexp.Regexp
+	Retry         uint
+	RetryPeriod   string `yaml:"retry-period"`
+	Actions       map[string]*Action
+}
+
+type Action struct {
+	name, filterName, streamName string
+	Cmd                          []string
+	After                        string `yaml:",omitempty"`
+}
+
+func (c *Conf) setup() {
+	for streamName, stream := range c.Streams {
+		for filterName, filter := range stream.Filters {
+			// Compute Regexes
+			for _, regex := range filter.Regex {
+				filter.compiledRegex = append(filter.compiledRegex, *regexp.MustCompile(regex))
+			}
+			// Give all relevant infos to Actions
+			for actionName, action := range filter.Actions {
+				action.name = actionName
+				action.filterName = filterName
+				action.streamName = streamName
 			}
 		}
 	}
@@ -37,13 +63,10 @@ func parseConf(filename string) *Conf {
 	if err != nil {
 		log.Fatalln("Failed to parse configuration file:", err)
 	}
-	log.Println(conf)
 
-	yaml, err := yaml.Marshal(conf)
-	if err != nil {
-		log.Fatalln("Failed to rewrite configuration file:", err)
-	}
-	log.Println(string(yaml))
+	conf.setup()
+	fmt.Printf("conf.Streams[0].Filters[0].Actions: %s\n", conf.Streams["tailDown"].Filters["lookForProuts"].Actions)
+
 	return &conf
 }
 
