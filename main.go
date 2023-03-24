@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -89,7 +91,15 @@ func (s *Stream) handle() {
 }
 
 func main() {
-	conf := parseConf("./reaction.yml")
+	confFilename := flag.String("c", "", "configuration file. see an example at https://framagit.org/ppom/reaction/-/blob/main/reaction.yml")
+	flag.Parse()
+
+	if *confFilename == "" {
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
+
+	conf := parseConf(*confFilename)
 
 	for _, stream := range conf.Streams {
 		go stream.handle()

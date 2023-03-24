@@ -133,8 +133,3 @@ func parseConf(filename string) *Conf {
 
 	return &conf
 }
-
-func parseArgs() map[string]string {
-	var args map[string]string
-	return args
-}
