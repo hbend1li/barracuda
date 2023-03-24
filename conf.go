@@ -28,9 +28,9 @@ type Filter struct {
 	stream *Stream
 	name   string
 
-	Regex         []string
-	compiledRegex []regexp.Regexp
-	patternName   string
+	Regex                          []string
+	compiledRegex                  []regexp.Regexp
+	patternName, patternWithBraces string
 
 	Retry         uint
 	RetryPeriod   string `yaml:"retry-period"`
@@ -80,9 +80,9 @@ func (c *Conf) setup() {
 						switch filter.patternName {
 						case "":
 							filter.patternName = patternName
+							filter.patternWithBraces = fmt.Sprintf("<%s>", patternName)
 						case patternName:
 							// no op
-							filter.patternName = patternName
 						default:
 							log.Fatalf(
 								"ERROR Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",

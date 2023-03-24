@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -52,25 +51,25 @@ func (f *Filter) match(line string) string {
 }
 
 func (f *Filter) execActions(match string) {
-	pattern := fmt.Sprintf("<%s>", f.patternName)
 	for _, a := range f.Actions {
-		go a.exec(match, pattern)
+		go a.exec(match)
 	}
 }
 
-func (a *Action) exec(match, pattern string) {
+func (a *Action) exec(match string) {
 	if a.afterDuration != 0 {
 		time.Sleep(a.afterDuration)
 	}
 
 	computedCommand := make([]string, 0, len(a.Cmd))
 	for _, item := range a.Cmd {
-		computedCommand = append(computedCommand, strings.ReplaceAll(item, pattern, match))
+		computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.patternWithBraces, match))
 	}
 
 	log.Printf("INFO %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
 
 	cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
+
 	if ret := cmd.Run(); ret != nil {
 		log.Printf("ERR  %s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
 	}
