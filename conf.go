@@ -6,39 +6,63 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Conf struct {
-	Streams map[string]Stream
+	Patterns map[string]string
+	Streams  map[string]*Stream
 }
 
 type Stream struct {
+	name string
+
 	Cmd     []string
 	Filters map[string]*Filter
 }
 
 type Filter struct {
+	stream *Stream
+	name   string
+
 	Regex         []string
-	compiledRegex []regexp.Regexp // Computed after YAML parsing
+	compiledRegex []regexp.Regexp
+	patternName   string
+
 	Retry         uint
 	RetryPeriod   string `yaml:"retry-period"`
-	retryDuration time.Duration // Computed after YAML parsing
-	Actions       map[string]*Action
+	retryDuration time.Duration
+
+	Actions map[string]*Action
 }
 
 type Action struct {
-	name, filterName, streamName string // Computed after YAML parsing
-	Cmd                          []string
-	After                        string `yaml:",omitempty"`
-	afterDuration                time.Duration // Computed after YAML parsing
+	filter *Filter
+	name   string
+
+	Cmd []string
+
+	After         string `yaml:",omitempty"`
+	afterDuration time.Duration
 }
 
 func (c *Conf) setup() {
-	for streamName, stream := range c.Streams {
-		for filterName, filter := range stream.Filters {
+	for patternName, pattern := range c.Patterns {
+		c.Patterns[patternName] = fmt.Sprintf("(?P<%s>%s)", patternName, pattern)
+	}
+	for streamName := range c.Streams {
+
+		stream := c.Streams[streamName]
+		stream.name = streamName
+
+		for filterName := range stream.Filters {
+
+			filter := stream.Filters[filterName]
+			filter.stream = stream
+			filter.name = filterName
 
 			// Parse Duration
 			retryDuration, err := time.ParseDuration(filter.RetryPeriod)
@@ -48,16 +72,35 @@ func (c *Conf) setup() {
 			filter.retryDuration = retryDuration
 
 			// Compute Regexes
+			// Look for Patterns inside Regexes
 			for _, regex := range filter.Regex {
+				for patternName, pattern := range c.Patterns {
+					if strings.Contains(regex, patternName) {
+
+						switch filter.patternName {
+						case "":
+							filter.patternName = patternName
+						case patternName:
+							// no op
+							filter.patternName = patternName
+						default:
+							log.Fatalf(
+								"ERROR Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
+								filter.patternName, patternName, streamName, filterName,
+							)
+						}
+
+						regex = strings.Replace(regex, fmt.Sprintf("<%s>", patternName), pattern, 1)
+					}
+				}
 				filter.compiledRegex = append(filter.compiledRegex, *regexp.MustCompile(regex))
 			}
 
-			for actionName, action := range filter.Actions {
+			for actionName := range filter.Actions {
 
-				// Give all relevant infos to Actions
+				action := filter.Actions[actionName]
+				action.filter = filter
 				action.name = actionName
-				action.filterName = filterName
-				action.streamName = streamName
 
 				// Parse Duration
 				if action.After != "" {
@@ -87,7 +130,6 @@ func parseConf(filename string) *Conf {
 	}
 
 	conf.setup()
-	fmt.Printf("conf.Streams[0].Filters[0].Actions: %s\n", conf.Streams["tailDown"].Filters["lookForProuts"].Actions)
 
 	return &conf
 }

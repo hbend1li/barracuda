@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
-	"time"
 	"os/exec"
+	"strings"
+	"time"
 )
 
+// Executes a command and channel-send its stdout
 func cmdStdout(commandline []string) chan string {
 	lines := make(chan string)
 
@@ -31,45 +34,55 @@ func cmdStdout(commandline []string) chan string {
 	return lines
 }
 
-func (f *Filter) match(line string) bool {
-	log.Printf("trying to match line {%s}...\n", line)
+// Whether one of the filter's regexes is matched on a line
+func (f *Filter) match(line string) string {
 	for _, regex := range f.compiledRegex {
-		log.Printf("...on %s\n", regex.String())
-		if match := regex.FindString(line); match != "" {
-			log.Printf("match `%v` in line: `%v`\n", regex.String(), line)
-			return true
+
+		if matches := regex.FindStringSubmatch(line); matches != nil {
+
+			match := matches[regex.SubexpIndex(f.patternName)]
+
+			log.Printf("INFO %s.%s: match `%v`\n", f.stream.name, f.name, match)
+			return match
 		}
 	}
-	return false
+	return ""
 }
 
-func (f *Filter) launch(line *string) {
+func (f *Filter) execActions(match string) {
+	pattern := fmt.Sprintf("<%s>", f.patternName)
 	for _, a := range f.Actions {
-		go a.launch(line)
+		go a.exec(match, pattern)
 	}
 }
 
-func (a *Action) launch(line *string) {
+func (a *Action) exec(match, pattern string) {
 	if a.afterDuration != 0 {
 		time.Sleep(a.afterDuration)
 	}
-	log.Printf("INFO %s.%s.%s: line {%s} → run %s\n", a.streamName, a.filterName, a.name, *line, a.Cmd)
 
-	cmd := exec.Command(a.Cmd[0], a.Cmd[1:]...)
+	computedCommand := make([]string, 0, len(a.Cmd))
+	for _, item := range a.Cmd {
+		computedCommand = append(computedCommand, strings.ReplaceAll(item, pattern, match))
+	}
+
+	log.Printf("INFO %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
+
+	cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
 	if ret := cmd.Run(); ret != nil {
-		log.Printf("ERR  %s.%s.%s: line {%s} → run %s, code {%s}\n", a.streamName, a.filterName, a.name, *line, a.Cmd, ret)
+		log.Printf("ERR  %s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
 	}
 }
 
 func (s *Stream) handle() {
-	log.Printf("streamHandle{%v}: start\n", s.Cmd)
+	log.Printf("INFO %s: start %s\n", s.name, s.Cmd)
 
 	lines := cmdStdout(s.Cmd)
 
 	for line := range lines {
 		for _, filter := range s.Filters {
-			if filter.match(line) {
-				filter.launch(&line)
+			if match := filter.match(line); match != "" {
+				filter.execActions(match)
 			}
 		}
 	}

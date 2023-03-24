@@ -3,21 +3,21 @@ definitions:
   - &iptablesban iptables -I reaction 1 -s <ip> -j block
   - &iptablesunban iptables -D reaction 1 -s <ip> -j block
 
-# regexes:
-#   ip: '(([0-9]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
+patterns:
+  ip: '(([0-9]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
 
 streams:
   tailDown:
     cmd: [ "tail", "-f", "/home/ao/DOWN" ]
     filters:
-      lookForProuts:
+      findIP:
         regex:
-          - prout
-        retry: 1
+          - found <ip>
+        # retry: 1
         retry-period: 1s
         actions:
           damn:
-            cmd: [ "echo", "DAMN" ]
+            cmd: [ "echo", "<ip>" ]
           sleepdamn:
-            cmd: [ "echo", "sleepDAMN" ]
-            after: 2s
+            cmd: [ "echo", "sleep", "<ip>" ]
+            after: 1s
