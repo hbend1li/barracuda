@@ -31,7 +31,7 @@ type Filter struct {
 	compiledRegex                  []regexp.Regexp
 	patternName, patternWithBraces string
 
-	Retry         uint
+	Retry         int
 	RetryPeriod   string `yaml:"retry-period"`
 	retryDuration time.Duration
 
@@ -64,6 +64,7 @@ func (c *Conf) setup() {
 			filter := stream.Filters[filterName]
 			filter.stream = stream
 			filter.name = filterName
+			filter.matches = make(map[string][]time.Time)
 
 			// Parse Duration
 			retryDuration, err := time.ParseDuration(filter.RetryPeriod)

@@ -3,6 +3,7 @@ package app
 import (
 	"bufio"
 	"flag"
+
 	// "fmt"
 	"log"
 	"os"
@@ -80,13 +81,31 @@ func (a *Action) exec(match string) {
 	}
 }
 
+func (f *Filter) cleanOldMatches(match string) {
+	now := time.Now()
+	newMatches := make([]time.Time, 0, len(f.matches[match]))
+	for _, old := range f.matches[match] {
+		if old.Add(f.retryDuration).After(now) {
+			newMatches = append(newMatches, old)
+		}
+	}
+	f.matches[match] = newMatches
+}
+
 func (f *Filter) handle() chan *string {
 	lines := make(chan *string)
 
 	go func() {
 		for line := range lines {
 			if match := f.match(line); match != "" {
-				f.execActions(match)
+
+				f.cleanOldMatches(match)
+
+				f.matches[match] = append(f.matches[match], time.Now())
+
+				if len(f.matches[match]) >= f.Retry {
+					f.execActions(match)
+				}
 			}
 		}
 	}()

@@ -8,13 +8,13 @@ patterns:
 
 streams:
   tailDown:
-    cmd: [ "tail", "/home/ao/DOWN" ]
+    cmd: [ "sh", "-c", "echo 'found 1.1.1.1' && sleep 2s && echo 'found 1.1.1.2' && sleep 2s && echo 'found 1.1.1.1' && sleep 1s" ]
     filters:
       findIP:
         regex:
           - found <ip>
-        # retry: 1
-        retry-period: 1s
+        retry: 2
+        retry-period: 5s
         actions:
           damn:
             cmd: [ "echo", "<ip>" ]
