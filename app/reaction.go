@@ -1,4 +1,4 @@
-package reaction
+package app
 
 import (
 	"bufio"

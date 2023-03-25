@@ -1,9 +1,9 @@
 package main
 
 import (
-	"reaction/reaction"
+	"reaction/app"
 )
 
 func main() {
-	reaction.Main()
+	app.Main()
 }
