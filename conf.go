@@ -1,7 +1,6 @@
-package main
+package reaction
 
 import (
-	// "flag"
 	"fmt"
 	"log"
 	"os"
@@ -37,6 +36,8 @@ type Filter struct {
 	retryDuration time.Duration
 
 	Actions map[string]*Action
+
+	matches map[string][]time.Time
 }
 
 type Action struct {

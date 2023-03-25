@@ -8,7 +8,7 @@ patterns:
 
 streams:
   tailDown:
-    cmd: [ "tail", "-f", "/home/ao/DOWN" ]
+    cmd: [ "tail", "/home/ao/DOWN" ]
     filters:
       findIP:
         regex:
