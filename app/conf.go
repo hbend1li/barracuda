@@ -12,42 +12,43 @@ import (
 )
 
 type Conf struct {
-	Patterns map[string]string
-	Streams  map[string]*Stream
+	Patterns map[string]string  `yaml:"patterns"`
+	Streams  map[string]*Stream `yaml:"streams"`
 }
 
 type Stream struct {
-	name string
+	name string `yaml:"-"`
 
-	Cmd     []string
-	Filters map[string]*Filter
+	Cmd     []string           `yaml:"cmd"`
+	Filters map[string]*Filter `yaml:"filters"`
 }
 
 type Filter struct {
-	stream *Stream
-	name   string
+	stream *Stream `yaml:"-"`
+	name   string  `yaml:"-"`
 
-	Regex                          []string
-	compiledRegex                  []regexp.Regexp
-	patternName, patternWithBraces string
+	Regex             []string        `yaml:"regex"`
+	compiledRegex     []regexp.Regexp `yaml:"-"`
+	patternName       string          `yaml:"-"`
+	patternWithBraces string          `yaml:"-"`
 
-	Retry         int
-	RetryPeriod   string `yaml:"retry-period"`
-	retryDuration time.Duration
+	Retry         int           `yaml:"retry"`
+	RetryPeriod   string        `yaml:"retry-period"`
+	retryDuration time.Duration `yaml:"-"`
 
-	Actions map[string]*Action
+	Actions map[string]*Action `yaml:"actions"`
 
-	matches map[string][]time.Time
+	matches map[string][]time.Time `yaml:"-"`
 }
 
 type Action struct {
-	filter *Filter
-	name   string
+	filter *Filter `yaml:"-"`
+	name   string  `yaml:"-"`
 
-	Cmd []string
+	Cmd []string `yaml:"cmd"`
 
-	After         string `yaml:",omitempty"`
-	afterDuration time.Duration
+	After         string        `yaml:"after"`
+	afterDuration time.Duration `yaml:"-"`
 }
 
 func (c *Conf) setup() {
