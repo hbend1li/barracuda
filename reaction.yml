@@ -1,4 +1,5 @@
 ---
+# TODO heavily comment this file
 definitions:
   - &iptablesban [ "iptables" "-w" "-I" "reaction" "1" "-s" "<ip>" "-j" "block" ]
   - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "block" ]
@@ -8,6 +9,8 @@ patterns:
 
 streams:
   ssh:
+    # note that if the command is not in environment's `PATH`
+    # its full path must be given.
     cmd: [ "journalctl" "-fu" "sshd.service" ]
     filters:
       failedlogin:

@@ -66,18 +66,13 @@ WorkingDirectory=/var/lib/reaction
 ```
 See [reaction.service](./reaction.service) and [reaction.yml](./reaction.yml) for the fully commented examples.
 
-## documentation
-
-### configuration reference
-
-
-`cmd`: note that if program is not in environment's `PATH`, the full path to the command should be given.
-
-`/etc/systemd/system/reaction.service` (again, commented)
-```systemd
-```
-
-### implicit configuration
+### database
 
 the working directory of `reaction` will be used to create and read from the embedded [lmdb](https://www.symas.com/lmdb) database.
 if you don't know where to start it, `/var/lib/reaction` should be a sane choice.
+
+### compilation
+
+```shell
+$ go build .
+```
