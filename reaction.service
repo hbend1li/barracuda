@@ -1,0 +1,25 @@
+# vim: ft=systemd
+[Unit]
+WantedBy=multi-user.target
+
+[Service]
+ExecStart=/path/to/reaction -c /etc/reaction.yml
+
+# Create an iptables chain for reaction
+ExecStartPre=/path/to/iptables -w -N reaction
+# Set its default to ACCEPT
+ExecStartPre=/path/to/iptables -w -A reaction -j ACCEPT
+# Insert this chain as the first item of the INPUT chain (for incoming connections)
+ExecStartPre=/path/to/iptables -w -I INPUT -p all -j reaction
+
+# Remove the chain from the INPUT chain
+ExecStopPost=/path/to/iptables -w -D INPUT -p all -j reaction
+# Empty the chain
+ExecStopPost=/path/to/iptables -w -F reaction
+# Delete te chain
+ExecStopPost=/path/to/iptables -w -X reaction
+
+# Ask systemd to create /var/lib/reaction (/var/lib/ is implicit)
+StateDirectory=reaction
+# Start reaction in its state directory
+WorkingDirectory=/var/lib/reaction
