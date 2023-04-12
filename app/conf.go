@@ -55,11 +55,17 @@ func (c *Conf) setup() {
 	for patternName, pattern := range c.Patterns {
 		c.Patterns[patternName] = fmt.Sprintf("(?P<%s>%s)", patternName, pattern)
 	}
+	if len(c.Streams) == 0 {
+		log.Fatalln("Bad configuration: no streams configured!")
+	}
 	for streamName := range c.Streams {
 
 		stream := c.Streams[streamName]
 		stream.name = streamName
 
+		if len(stream.Filters) == 0 {
+			log.Fatalln("Bad configuration: no filters configured in '%s'!", stream.name)
+		}
 		for filterName := range stream.Filters {
 
 			filter := stream.Filters[filterName]
@@ -74,6 +80,9 @@ func (c *Conf) setup() {
 			}
 			filter.retryDuration = retryDuration
 
+			if len(filter.Regex) == 0 {
+				log.Fatalln("Bad configuration: no regexes configured in '%s.%s'!", stream.name, filter.name)
+			}
 			// Compute Regexes
 			// Look for Patterns inside Regexes
 			for _, regex := range filter.Regex {
@@ -99,6 +108,9 @@ func (c *Conf) setup() {
 				filter.compiledRegex = append(filter.compiledRegex, *regexp.MustCompile(regex))
 			}
 
+			if len(filter.Actions) == 0 {
+				log.Fatalln("Bad configuration: no actions configured in '%s.%s'!", stream.name, filter.name)
+			}
 			for actionName := range filter.Actions {
 
 				action := filter.Actions[actionName]
