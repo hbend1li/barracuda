@@ -14,6 +14,7 @@ i was using fail2ban since quite a long time, but i was a bit frustrated by it's
 and all its heavy default configuration.
 
 in my view, a security-oriented program should be simple to configure (`sudo` is a very bad exemple!)
+and an always-running daemon should be implemented in a fast language.
 
 ## configuration
 
