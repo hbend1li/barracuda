@@ -72,6 +72,14 @@ See [reaction.service](./reaction.service) and [reaction.yml](./reaction.yml) fo
 the working directory of `reaction` will be used to create and read from the embedded [lmdb](https://www.symas.com/lmdb) database.
 if you don't know where to start it, `/var/lib/reaction` should be a sane choice.
 
+### terminology
+
+- **streams** are commands. they're run and their ouptut is captured. *example:* `tail -f /var/log/nginx/access.log`
+  - **filters** belong to a **stream**. they run actions when they match **regexes**.
+    - **regexes** are regexes. *example:* `login failed from user .* from ip <ip>`
+      - **patterns** are also regexes. they're inserted inside **regexes**. example: `ip: ([0-9]{,3}.)[0-9]{,3}`
+    - **actions** are commands. example: `["echo" "matched <ip>"]`
+
 ### compilation
 
 ```shell
