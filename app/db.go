@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"runtime"
@@ -49,21 +50,49 @@ type AppendMatch struct {
 	}
 }
 
-func databaseHandler(env *lmdb.Env, chCE chan CmdExecuted, chAC chan AppendCmd, chAM chan AppendMatch) {
+var env *lmdb.Env
+
+// keys: pattern
+// values: []time.Time
+var matchDBs map[*Filter]lmdb.DBI
+
+// keys: pattern
+// values: []CmdTime
+var cmdDBs map[*Filter]lmdb.DBI
+
+func dbGet(dbi lmdb.DBI, pattern string) (interface{}, error) {
+	err = env.View(func(txn *lmdb.Txn) (err error) {
+		v, err := txn.Get(dbi, []byte(pattern))
+		if err != nil {
+			return nil, err
+		}
+		return json.Unmarshal(v)
+	})
+}
+
+func dbPut(dbi lmdb.DBI, pattern string, value interface{}) error {
+	err = env.UpdateLocked(func(txn *lmdb.Txn) (err error) {
+		jsonValue := json.Marshal(value)
+		return txn.Put(dbi, []byte(pattern), jsonValue, 0)
+	})
+}
+
+func databaseHandler(chCE chan CmdExecuted, chAC chan AppendCmd, chAM chan AppendMatch) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	defer env.Close()
 
 	select {
 	case ce := <-chCE:
+		// TODO
 		ce = ce
-		// TODO
 	case ac := <-chAC:
-		ac = ac
-		// TODO
+		err = env.UpdateLocked(func(txn *lmdb.Txn) (err error) {
+			return txn.Put(dbi, []byte("k"), []byte("v"), 0)
+		})
 	case am := <-chAM:
-		am = am
 		// TODO
+		am = am
 	}
 }
 
@@ -85,8 +114,8 @@ func initDatabase(conf *Conf) (chan CmdExecuted, chan AppendCmd, chan AppendMatc
 		log.Fatalln("LMDB.SetMaxDBs failed")
 	}
 
-	matchDBs := make(map[*Filter]lmdb.DBI, filterNumber)
-	cmdDBs := make(map[*Filter]lmdb.DBI, filterNumber)
+	matchDBs = make(map[*Filter]lmdb.DBI, filterNumber)
+	cmdDBs = make(map[*Filter]lmdb.DBI, filterNumber)
 
 	runtime.LockOSThread()
 
@@ -113,7 +142,7 @@ func initDatabase(conf *Conf) (chan CmdExecuted, chan AppendCmd, chan AppendMatc
 	chAC := make(chan AppendCmd)
 	chAM := make(chan AppendMatch)
 
-	go databaseHandler(env, chCE, chAC, chAM)
+	go databaseHandler(chCE, chAC, chAM)
 
 	return chCE, chAC, chAM
 }
