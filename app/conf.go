@@ -1,7 +1,9 @@
 package app
 
 import (
+	"encoding/gob"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -36,7 +38,8 @@ type Filter struct {
 	RetryPeriod   string        `yaml:"retry-period"`
 	retryDuration time.Duration `yaml:"-"`
 
-	Actions map[string]*Action `yaml:"actions"`
+	Actions                map[string]*Action `yaml:"actions"`
+	longuestActionDuration *time.Duration
 
 	matches map[string][]time.Time `yaml:"-"`
 }
@@ -49,6 +52,13 @@ type Action struct {
 
 	After         string        `yaml:"after"`
 	afterDuration time.Duration `yaml:"-"`
+}
+
+type LogEntry struct {
+	t              time.Time
+	pattern        string
+	stream, filter string
+	exec           bool
 }
 
 func (c *Conf) setup() {
@@ -128,6 +138,102 @@ func (c *Conf) setup() {
 			}
 		}
 	}
+}
+
+var DBname = "./reaction.db"
+var DBnewName = "./reaction.new.db"
+
+func (c *Conf) updateFromDB() {
+	file, err := os.Open(DBname)
+	if err != nil {
+		if err == os.ErrNotExist {
+			log.Printf("WARN: No DB found at %s\n", DBname)
+			return
+		}
+		log.Fatalln("Failed to open DB:", err)
+	}
+	dec := gob.NewDecoder(&file)
+
+	newfile, err := os.Create(DBnewName)
+	if err != nil {
+		log.Fatalln("Failed to open DB:", err)
+	}
+	enc := gob.NewEncoder(&newfile)
+
+	// This extra code is made to warn only one time for each non-existant filter
+	type SF struct{ s, f string }
+	discardedEntries := make(map[SF]bool)
+	malformedEntries := 0
+	defer func() {
+		for sf, t := range discardedEntries {
+			if t {
+				log.Printf("WARN: info discarded from the DB: stream/filter not found: %s.%s\n", sf.s, sf.f)
+			}
+		}
+		if malformedEntries > 0 {
+			log.Printf("WARN: %v malformed entry discarded from the DB\n", malformedEntries)
+		}
+	}()
+
+	encodeOrFatal := func(entry LogEntry) {
+		err = enc.Encode(entry)
+		if err != nil {
+			log.Fatalln("ERRO: couldn't write to new DB:", err)
+		}
+	}
+
+	now := time.Now()
+	for {
+		var entry LogEntry
+		var filter *Filter
+
+		// decode entry
+		err = dec.Decode(&entry)
+		if err != nil {
+			if err == io.EOF {
+				return
+			}
+			malformedEntries++
+			continue
+		}
+
+		// retrieve related filter
+		if s := c.Streams[entry.stream]; stream != nil {
+			filter = stream.Filters[entry.filter]
+		}
+		if filter == nil {
+			discardedEntries[SF{entry.stream, entry.filter}] = true
+			continue
+		}
+
+		// store matches
+		if !entry.exec && entry.t+filter.retryDuration > now {
+			filter.matches[entry.pattern] = append(f.matches[entry.pattern], entry.t)
+
+			encodeOrFatal(entry)
+		}
+
+		// replay executions
+		if entry.exec && entry.t+filter.longuestActionDuration > now {
+			delete(filter.matches, match)
+			filter.execActions(match, now-entry.t)
+
+			encodeOrFatal(entry)
+		}
+	}
+
+	err = os.Rename(DBnewName, DBname)
+	if err != nil {
+		log.Fatalln("ERRO: Failed to replace old DB with new one:", err)
+	}
+}
+
+func openDB() {
+	f, err := os.OpenFile(DBname, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		log.Fatalln("Failed to open DB:", err)
+	}
+	return gob.NewEncoder(&f)
 }
 
 func parseConf(filename string) *Conf {

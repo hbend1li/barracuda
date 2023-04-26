@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"encoding/gob"
 	"flag"
 
 	// "fmt"
@@ -54,17 +55,17 @@ func (f *Filter) match(line *string) string {
 	return ""
 }
 
-func (f *Filter) execActions(match string) {
+func (f *Filter) execActions(match string, advance time.Duration) {
 	for _, a := range f.Actions {
 		wgActions.Add(1)
-		go a.exec(match)
+		go a.exec(match, advance)
 	}
 }
 
-func (a *Action) exec(match string) {
+func (a *Action) exec(match string, advance time.Duration) {
 	defer wgActions.Done()
-	if a.afterDuration != 0 {
-		time.Sleep(a.afterDuration)
+	if a.afterDuration != 0 && a.afterDuration > advance {
+		time.Sleep(a.afterDuration - advance)
 	}
 
 	computedCommand := make([]string, 0, len(a.Cmd))
@@ -99,13 +100,19 @@ func (f *Filter) handle() chan *string {
 		for line := range lines {
 			if match := f.match(line); match != "" {
 
+				entry := LogEntry{time.Now(), match, f.stream.name, f.name, false}
+
 				f.cleanOldMatches(match)
 
 				f.matches[match] = append(f.matches[match], time.Now())
 
 				if len(f.matches[match]) >= f.Retry {
-					f.execActions(match)
+					entry.exec = true
+					delete(f.matches, match)
+					f.execActions(match, nil)
 				}
+
+				db.Encode(&entry)
 			}
 		}
 	}()
@@ -147,6 +154,8 @@ func (s *Stream) handle(signal chan *Stream) {
 
 var wgActions sync.WaitGroup
 
+var db gob.Encoder
+
 func Main() {
 	confFilename := flag.String("c", "", "configuration file. see an example at https://framagit.org/ppom/reaction/-/blob/main/reaction.yml")
 	flag.Parse()
@@ -157,6 +166,8 @@ func Main() {
 	}
 
 	conf := parseConf(*confFilename)
+
+	db = openDB()
 
 	endSignals := make(chan *Stream)
 
