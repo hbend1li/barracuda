@@ -65,7 +65,7 @@ ExecStopPost=/path/to/iptables -w -X reaction
 StateDirectory=reaction
 WorkingDirectory=/var/lib/reaction
 ```
-See [reaction.service](./reaction.service) and [reaction.yml](./reaction.yml) for the fully commented examples.
+See [reaction.service](./config/reaction.service) and [reaction.yml](./config/reaction.yml) for the fully commented examples.
 
 ### database
 
