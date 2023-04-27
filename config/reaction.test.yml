@@ -10,10 +10,10 @@ streams:
         regex:
           - found <ip>
         retry: 2
-        retry-period: 5s
+        retry-period: 1m
         actions:
           damn:
             cmd: [ "echo", "<ip>" ]
           sleepdamn:
             cmd: [ "echo", "sleep", "<ip>" ]
-            after: 1s
+            after: 10s

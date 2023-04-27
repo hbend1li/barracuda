@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -55,10 +56,10 @@ type Action struct {
 }
 
 type LogEntry struct {
-	t              time.Time
-	pattern        string
-	stream, filter string
-	exec           bool
+	T              time.Time
+	Pattern        string
+	Stream, Filter string
+	Exec           bool
 }
 
 func (c *Conf) setup() {
@@ -135,6 +136,9 @@ func (c *Conf) setup() {
 					}
 					action.afterDuration = afterDuration
 				}
+				if filter.longuestActionDuration == nil || filter.longuestActionDuration.Milliseconds() < action.afterDuration.Milliseconds() {
+					filter.longuestActionDuration = &action.afterDuration
+				}
 			}
 		}
 	}
@@ -143,22 +147,40 @@ func (c *Conf) setup() {
 var DBname = "./reaction.db"
 var DBnewName = "./reaction.new.db"
 
-func (c *Conf) updateFromDB() {
+func (c *Conf) updateFromDB() *gob.Encoder {
 	file, err := os.Open(DBname)
 	if err != nil {
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			log.Printf("WARN: No DB found at %s\n", DBname)
-			return
+
+			file, err := os.Create(DBname)
+			if err != nil {
+				log.Fatalln("Failed to create DB:", err)
+			}
+			return gob.NewEncoder(file)
 		}
 		log.Fatalln("Failed to open DB:", err)
 	}
-	dec := gob.NewDecoder(&file)
+	dec := gob.NewDecoder(file)
 
 	newfile, err := os.Create(DBnewName)
 	if err != nil {
-		log.Fatalln("Failed to open DB:", err)
+		log.Fatalln("Failed to create new DB:", err)
 	}
-	enc := gob.NewEncoder(&newfile)
+	enc := gob.NewEncoder(newfile)
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Fatalln("ERRO: Failed to close old DB:", err)
+		}
+
+		// It should be ok to rename an open file
+		err = os.Rename(DBnewName, DBname)
+		if err != nil {
+			log.Fatalln("ERRO: Failed to replace old DB with new one:", err)
+		}
+	}()
 
 	// This extra code is made to warn only one time for each non-existant filter
 	type SF struct{ s, f string }
@@ -171,7 +193,7 @@ func (c *Conf) updateFromDB() {
 			}
 		}
 		if malformedEntries > 0 {
-			log.Printf("WARN: %v malformed entry discarded from the DB\n", malformedEntries)
+			log.Printf("WARN: %v malformed entries discarded from the DB\n", malformedEntries)
 		}
 	}()
 
@@ -191,52 +213,39 @@ func (c *Conf) updateFromDB() {
 		err = dec.Decode(&entry)
 		if err != nil {
 			if err == io.EOF {
-				return
+				return enc
 			}
 			malformedEntries++
 			continue
 		}
 
 		// retrieve related filter
-		if s := c.Streams[entry.stream]; stream != nil {
-			filter = stream.Filters[entry.filter]
+		if stream := c.Streams[entry.Stream]; stream != nil {
+			filter = stream.Filters[entry.Filter]
 		}
 		if filter == nil {
-			discardedEntries[SF{entry.stream, entry.filter}] = true
+			discardedEntries[SF{entry.Stream, entry.Filter}] = true
 			continue
 		}
 
 		// store matches
-		if !entry.exec && entry.t+filter.retryDuration > now {
-			filter.matches[entry.pattern] = append(f.matches[entry.pattern], entry.t)
+		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
+			filter.matches[entry.Pattern] = append(filter.matches[entry.Pattern], entry.T)
 
 			encodeOrFatal(entry)
 		}
 
 		// replay executions
-		if entry.exec && entry.t+filter.longuestActionDuration > now {
-			delete(filter.matches, match)
-			filter.execActions(match, now-entry.t)
+		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
+			delete(filter.matches, entry.Pattern)
+			filter.execActions(entry.Pattern, now.Sub(entry.T))
 
 			encodeOrFatal(entry)
 		}
 	}
-
-	err = os.Rename(DBnewName, DBname)
-	if err != nil {
-		log.Fatalln("ERRO: Failed to replace old DB with new one:", err)
-	}
 }
 
-func openDB() {
-	f, err := os.OpenFile(DBname, os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		log.Fatalln("Failed to open DB:", err)
-	}
-	return gob.NewEncoder(&f)
-}
-
-func parseConf(filename string) *Conf {
+func parseConf(filename string) (*Conf, *gob.Encoder) {
 
 	data, err := os.ReadFile(filename)
 
@@ -251,6 +260,7 @@ func parseConf(filename string) *Conf {
 	}
 
 	conf.setup()
+	enc := conf.updateFromDB()
 
-	return &conf
+	return &conf, enc
 }

@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"encoding/gob"
 	"flag"
+	"syscall"
 
 	// "fmt"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"sync"
 	"time"
@@ -107,9 +109,9 @@ func (f *Filter) handle() chan *string {
 				f.matches[match] = append(f.matches[match], time.Now())
 
 				if len(f.matches[match]) >= f.Retry {
-					entry.exec = true
+					entry.Exec = true
 					delete(f.matches, match)
-					f.execActions(match, nil)
+					f.execActions(match, time.Duration(0))
 				}
 
 				db.Encode(&entry)
@@ -154,9 +156,12 @@ func (s *Stream) handle(signal chan *Stream) {
 
 var wgActions sync.WaitGroup
 
-var db gob.Encoder
+var db *gob.Encoder
 
 func Main() {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	confFilename := flag.String("c", "", "configuration file. see an example at https://framagit.org/ppom/reaction/-/blob/main/reaction.yml")
 	flag.Parse()
 
@@ -165,22 +170,33 @@ func Main() {
 		os.Exit(2)
 	}
 
-	conf := parseConf(*confFilename)
-
-	db = openDB()
+	conf, localdb := parseConf(*confFilename)
+	db = localdb
 
 	endSignals := make(chan *Stream)
+	noStreamsInExecution := len(conf.Streams)
 
 	for _, stream := range conf.Streams {
 		go stream.handle(endSignals)
 	}
 
-	for i := 0; i < len(conf.Streams); i++ {
-		finishedStream := <-endSignals
-		log.Printf("ERR  %s stream finished", finishedStream.name)
+	for {
+		select {
+		case finishedStream := <-endSignals:
+			log.Printf("ERR  %s stream finished", finishedStream.name)
+			noStreamsInExecution--
+			if noStreamsInExecution == 0 {
+				quit()
+			}
+		case <-sigs:
+			log.Printf("Received SIGINT or SIGTERM, exiting")
+			quit()
+		}
 	}
+}
 
+func quit() {
+	// TODO replace with advanced execution of all WIP actions
 	wgActions.Wait()
-
 	os.Exit(3)
 }
