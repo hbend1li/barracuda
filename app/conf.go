@@ -67,7 +67,7 @@ func (c *Conf) setup() {
 		c.Patterns[patternName] = fmt.Sprintf("(?P<%s>%s)", patternName, pattern)
 	}
 	if len(c.Streams) == 0 {
-		log.Fatalln("Bad configuration: no streams configured!")
+		log.Fatalln("FATAL Bad configuration: no streams configured!")
 	}
 	for streamName := range c.Streams {
 
@@ -75,7 +75,7 @@ func (c *Conf) setup() {
 		stream.name = streamName
 
 		if len(stream.Filters) == 0 {
-			log.Fatalln("Bad configuration: no filters configured in '%s'!", stream.name)
+			log.Fatalln("FATAL Bad configuration: no filters configured in '%s'!", stream.name)
 		}
 		for filterName := range stream.Filters {
 
@@ -87,12 +87,12 @@ func (c *Conf) setup() {
 			// Parse Duration
 			retryDuration, err := time.ParseDuration(filter.RetryPeriod)
 			if err != nil {
-				log.Fatalln("Failed to parse time in configuration file:", err)
+				log.Fatalln("FATAL Bad configuration: Failed to parse time:", err)
 			}
 			filter.retryDuration = retryDuration
 
 			if len(filter.Regex) == 0 {
-				log.Fatalln("Bad configuration: no regexes configured in '%s.%s'!", stream.name, filter.name)
+				log.Fatalln("FATAL Bad configuration: no regexes configured in '%s.%s'!", stream.name, filter.name)
 			}
 			// Compute Regexes
 			// Look for Patterns inside Regexes
@@ -108,7 +108,7 @@ func (c *Conf) setup() {
 							// no op
 						default:
 							log.Fatalf(
-								"ERROR Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
+								"Bad configuration: Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
 								filter.patternName, patternName, streamName, filterName,
 							)
 						}
@@ -120,7 +120,7 @@ func (c *Conf) setup() {
 			}
 
 			if len(filter.Actions) == 0 {
-				log.Fatalln("Bad configuration: no actions configured in '%s.%s'!", stream.name, filter.name)
+				log.Fatalln("FATAL Bad configuration: no actions configured in '%s.%s'!", stream.name, filter.name)
 			}
 			for actionName := range filter.Actions {
 
@@ -132,7 +132,7 @@ func (c *Conf) setup() {
 				if action.After != "" {
 					afterDuration, err := time.ParseDuration(action.After)
 					if err != nil {
-						log.Fatalln("Failed to parse time in configuration file:", err)
+						log.Fatalln("FATAL Bad configuration: Failed to parse time:", err)
 					}
 					action.afterDuration = afterDuration
 				}
@@ -151,34 +151,34 @@ func (c *Conf) updateFromDB() *gob.Encoder {
 	file, err := os.Open(DBname)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.Printf("WARN: No DB found at %s\n", DBname)
+			log.Printf("WARN  No DB found at %s. It's ok if this is the first time reaction is running.\n", DBname)
 
 			file, err := os.Create(DBname)
 			if err != nil {
-				log.Fatalln("Failed to create DB:", err)
+				log.Fatalln("FATAL Failed to create DB:", err)
 			}
 			return gob.NewEncoder(file)
 		}
-		log.Fatalln("Failed to open DB:", err)
+		log.Fatalln("FATAL Failed to open DB:", err)
 	}
 	dec := gob.NewDecoder(file)
 
 	newfile, err := os.Create(DBnewName)
 	if err != nil {
-		log.Fatalln("Failed to create new DB:", err)
+		log.Fatalln("FATAL Failed to create new DB:", err)
 	}
 	enc := gob.NewEncoder(newfile)
 
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Fatalln("ERRO: Failed to close old DB:", err)
+			log.Fatalln("FATAL Failed to close old DB:", err)
 		}
 
 		// It should be ok to rename an open file
 		err = os.Rename(DBnewName, DBname)
 		if err != nil {
-			log.Fatalln("ERRO: Failed to replace old DB with new one:", err)
+			log.Fatalln("FATAL Failed to replace old DB with new one:", err)
 		}
 	}()
 
@@ -189,18 +189,18 @@ func (c *Conf) updateFromDB() *gob.Encoder {
 	defer func() {
 		for sf, t := range discardedEntries {
 			if t {
-				log.Printf("WARN: info discarded from the DB: stream/filter not found: %s.%s\n", sf.s, sf.f)
+				log.Printf("WARN  info discarded from the DB: stream/filter not found: %s.%s\n", sf.s, sf.f)
 			}
 		}
 		if malformedEntries > 0 {
-			log.Printf("WARN: %v malformed entries discarded from the DB\n", malformedEntries)
+			log.Printf("WARN  %v malformed entries discarded from the DB\n", malformedEntries)
 		}
 	}()
 
 	encodeOrFatal := func(entry LogEntry) {
 		err = enc.Encode(entry)
 		if err != nil {
-			log.Fatalln("ERRO: couldn't write to new DB:", err)
+			log.Fatalln("FATAL Failed to write to new DB:", err)
 		}
 	}
 
@@ -250,13 +250,13 @@ func parseConf(filename string) (*Conf, *gob.Encoder) {
 	data, err := os.ReadFile(filename)
 
 	if err != nil {
-		log.Fatalln("Failed to read configuration file:", err)
+		log.Fatalln("FATAL Failed to read configuration file:", err)
 	}
 
 	var conf Conf
 	err = yaml.Unmarshal(data, &conf)
 	if err != nil {
-		log.Fatalln("Failed to parse configuration file:", err)
+		log.Fatalln("FATAL Failed to parse configuration file:", err)
 	}
 
 	conf.setup()

@@ -50,7 +50,7 @@ func (f *Filter) match(line *string) string {
 
 			match := matches[regex.SubexpIndex(f.patternName)]
 
-			log.Printf("INFO %s.%s: match [%v]\n", f.stream.name, f.name, match)
+			log.Printf("INFO  %s.%s: match [%v]\n", f.stream.name, f.name, match)
 			return match
 		}
 	}
@@ -92,12 +92,12 @@ func (a *Action) exec(match string, advance time.Duration) {
 		computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.patternWithBraces, match))
 	}
 
-	log.Printf("INFO %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
+	log.Printf("INFO  %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
 
 	cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
 
 	if ret := cmd.Run(); ret != nil {
-		log.Printf("ERR  %s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
+		log.Printf("ERROR %s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
 	}
 }
 
@@ -140,7 +140,7 @@ func (f *Filter) handle() chan *string {
 }
 
 func (s *Stream) handle(endedSignal chan *Stream) {
-	log.Printf("INFO %s: start %s\n", s.name, s.Cmd)
+	log.Printf("INFO  %s: start %s\n", s.name, s.Cmd)
 
 	lines := cmdStdout(s.Cmd)
 
@@ -207,7 +207,7 @@ func Main() {
 	for {
 		select {
 		case finishedStream := <-endSignals:
-			log.Printf("ERR  %s stream finished", finishedStream.name)
+			log.Printf("ERROR %s stream finished", finishedStream.name)
 			noStreamsInExecution--
 			if noStreamsInExecution == 0 {
 				quit()
