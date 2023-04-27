@@ -3,8 +3,8 @@
 # definitions are just a place to put chunks of conf you want to reuse in another place
 # they're not readed by reaction
 definitions:
-  - &iptablesban [ "iptables" "-w" "-I" "reaction" "1" "-s" "<ip>" "-j" "block" ]
-  - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "block" ]
+  - &iptablesban [ "iptables" "-w" "-A" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+  - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
 
 # patterns are substitued in regexes.
 # when a filter performs an action, it replaces the found pattern
