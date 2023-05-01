@@ -180,9 +180,6 @@ var wgActions sync.WaitGroup
 var db *gob.Encoder
 
 func Main() {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
 	confFilename := flag.String("c", "", "configuration file. see an example at https://framagit.org/ppom/reaction/-/blob/main/reaction.yml")
 	flag.Parse()
 
@@ -191,8 +188,13 @@ func Main() {
 		os.Exit(2)
 	}
 
-	conf, localdb := parseConf(*confFilename)
-	db = localdb
+	conf := parseConf(*confFilename)
+	db = conf.updateFromDB()
+
+	// Ready to start
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	stopStreams = make(chan bool)
 	stopActions = make(chan bool)

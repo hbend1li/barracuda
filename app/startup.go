@@ -19,6 +19,9 @@ type Conf struct {
 	Streams  map[string]*Stream `yaml:"streams"`
 }
 
+// Stream, Filter & Action structures must never be copied.
+// They're always referenced through pointers
+
 type Stream struct {
 	name string `yaml:"-"`
 
@@ -248,7 +251,6 @@ func (c *Conf) updateFromDB() *gob.Encoder {
 func parseConf(filename string) (*Conf, *gob.Encoder) {
 
 	data, err := os.ReadFile(filename)
-
 	if err != nil {
 		log.Fatalln("FATAL Failed to read configuration file:", err)
 	}
@@ -260,7 +262,5 @@ func parseConf(filename string) (*Conf, *gob.Encoder) {
 	}
 
 	conf.setup()
-	enc := conf.updateFromDB()
-
-	return &conf, enc
+	return &conf
 }
