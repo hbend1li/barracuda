@@ -2,12 +2,10 @@ package app
 
 import (
 	"encoding/gob"
-	"errors"
 	"log"
+	"net"
 	"os"
 	"sync"
-	"syscall"
-	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -109,78 +107,60 @@ func (r ReadableMap) ToString() string {
 	return string(text)
 }
 
-// Pipe-related, server-related functions
+// Socket-related, server-related functions
 
-func createOpenPipe() *os.File {
-	err := os.Mkdir(RuntimeDirectory(), 0755)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		log.Fatalln("FATAL Failed to create runtime directory", err)
-	}
-	pipePath := PipePath()
-	_, err = os.Stat(pipePath)
+func createOpenSocket() net.Listener {
+	socketPath := SocketPath()
+	_, err := os.Stat(socketPath)
 	if err == nil {
-		log.Println("WARN  Runtime file", pipePath, "already exists: Is the daemon already running? Deleting.")
-		err = os.Remove(pipePath)
+		log.Println("WARN  socket", socketPath, "already exists: Is the daemon already running? Deleting.")
+		err = os.Remove(socketPath)
 		if err != nil {
-			log.Println("FATAL Failed to remove runtime file:", err)
+			log.Println("FATAL Failed to remove socket:", err)
 		}
 	}
-	err = syscall.Mkfifo(pipePath, 0600)
+	ln, err := net.Listen("unix", socketPath)
 	if err != nil {
-		log.Println("FATAL Failed to create runtime file:", err)
+		log.Println("FATAL Failed to create socket:", err)
 	}
-	file, err := os.OpenFile(pipePath, os.O_RDONLY, os.ModeNamedPipe)
-	if err != nil {
-		log.Println("FATAL Failed to open runtime file:", err)
-	}
-	return file
-}
-
-func Respond(request Request, response Response) {
-	file, err := os.Create(request.ResponsePath())
-	if err != nil {
-		log.Println("WARN  Can't respond to message:", err)
-		return
-	}
-	err = gob.NewEncoder(file).Encode(response)
-	if err != nil {
-		log.Println("WARN  Can't respond to message:", err)
-		return
-	}
+	return ln
 }
 
 // Handle connections
 func Serve() {
-	pipe := createOpenPipe()
+	ln := createOpenSocket()
+	defer ln.Close()
 	for {
-		var request Request
-		err := gob.NewDecoder(pipe).Decode(&request)
+		conn, err := ln.Accept()
 		if err != nil {
-			d, _ := time.ParseDuration("1s")
-			if err.Error() == "EOF" {
-				log.Println("DEBUG received EOF, seeking one byte")
-				_, err = pipe.Seek(1, 1)
-				if err != nil {
-					log.Println("DEBUG failed to seek:", err)
-				}
-				time.Sleep(d)
-				continue
-			}
-			log.Println("WARN  Invalid Message received:", err)
-			time.Sleep(d)
+			log.Println("ERROR Failed to open connection from cli:", err)
 			continue
 		}
-		go func(request Request) {
+		go func(conn net.Conn) {
+			var request Request
 			var response Response
+
+			err := gob.NewDecoder(conn).Decode(&request)
+			if err != nil {
+				log.Println("ERROR Invalid Message from cli:", err)
+				return
+			}
+
 			switch request.Request {
 			case Query:
 				response.Actions = actionStore.store.ToReadable()
 			case Flush:
 				actionStore.Flush(request.Pattern)
 			default:
-				log.Println("WARN  Invalid Message: unrecognised Request type")
+				log.Println("ERROR Invalid Message from cli: unrecognised Request type")
+				return
 			}
-			Respond(request, response)
-		}(request)
+
+			gob.NewEncoder(conn).Encode(response)
+			if err != nil {
+				log.Println("ERROR Can't respond to cli:", err)
+				return
+			}
+		}(conn)
 	}
 }

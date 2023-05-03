@@ -2,13 +2,10 @@ package app
 
 import (
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"log"
-	"math/rand"
+	"net"
 	"os"
-	"path"
-	"time"
 )
 
 const (
@@ -18,7 +15,6 @@ const (
 
 type Request struct {
 	Request int
-	Id      int
 	Pattern string
 }
 
@@ -27,65 +23,27 @@ type Response struct {
 	Actions ReadableMap
 }
 
-// Runtime files:
-// /run/user/<uid>/reaction/reaction.pipe
-// /run/user/<uid>/reaction/id.response
-
-func RuntimeDirectory() string {
-	return fmt.Sprintf("/run/user/%v/reaction/", os.Getuid())
-}
-
-func PipePath() string {
-	return path.Join(RuntimeDirectory(), "reaction.pipe")
-}
-
-func (r Request) ResponsePath() string {
-	return path.Join(RuntimeDirectory(), string(r.Id))
-}
-
-func Send(data Request) {
-	pipePath := PipePath()
-	pipe, err := os.OpenFile(pipePath, os.O_RDWR, os.ModeNamedPipe)
-	if err != nil {
-		log.Println("Failed to open", pipePath, ":", err)
-		log.Fatalln("Is the reaction daemon running? Does the CLI run as the same user?")
-	}
-	log.Println("DEBUG opening ok, encoding...")
-	enc := gob.NewEncoder(pipe)
-	err = enc.Encode(data)
-	if err != nil {
-		log.Fatalf("Failed to write to %s: %s", pipePath, err)
-	}
+func SocketPath() string {
+	return fmt.Sprintf("/run/user/%v/reaction.sock", os.Getuid())
 }
 
 func SendAndRetrieve(data Request) Response {
-	if data.Id == 0 {
-		data.Id = rand.Int()
+	conn, err := net.Dial("unix", SocketPath())
+	if err != nil {
+		log.Fatalln("Error opening connection top daemon:", err)
 	}
-	log.Println("DEBUG sending:", data)
-	Send(data)
-	responsePath := data.ResponsePath()
-	d, _ := time.ParseDuration("100ms")
-	for tries := 20; tries > 0; tries-- {
-		log.Println("DEBUG waiting for answer...")
-		file, err := os.Open(responsePath)
-		if errors.Is(err, os.ErrNotExist) {
-			time.Sleep(d)
-			continue
-		}
-		defer os.Remove(responsePath)
-		if err != nil {
-			log.Fatalf("Error opening daemon answer: %s", err)
-		}
-		var response Response
-		err = gob.NewDecoder(file).Decode(&response)
-		if err != nil {
-			log.Fatalf("Error parsing daemon answer: %s", err)
-		}
-		return response
+
+	err = gob.NewEncoder(conn).Encode(data)
+	if err != nil {
+		log.Fatalln("Can't send message:", err)
 	}
-	log.Fatalln("Timeout while waiting answer from the daemon")
-	return Response{errors.New("unreachable code"), nil}
+
+	var response Response
+	err = gob.NewDecoder(conn).Decode(&response)
+	if err != nil {
+		log.Fatalln("Invalid answer from daemon:", err)
+	}
+	return response
 }
 
 func usage(err string) {
@@ -96,7 +54,7 @@ func usage(err string) {
 
 func CLI() {
 	if len(os.Args) <= 1 {
-		response := SendAndRetrieve(Request{Query, 0, ""})
+		response := SendAndRetrieve(Request{Query, ""})
 		if response.Err != nil {
 			log.Fatalln("Received error from daemon:", response.Err)
 		}
@@ -108,7 +66,7 @@ func CLI() {
 		if len(os.Args) != 3 {
 			usage("flush takes one <PATTERN> argument")
 		}
-		response := SendAndRetrieve(Request{Flush, 0, os.Args[2]})
+		response := SendAndRetrieve(Request{Flush, os.Args[2]})
 		if response.Err != nil {
 			log.Fatalln("Received error from daemon:", response.Err)
 		}

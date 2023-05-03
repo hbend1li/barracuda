@@ -24,10 +24,10 @@ func cmdStdout(commandline []string) chan *string {
 		cmd := exec.Command(commandline[0], commandline[1:]...)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			log.Fatalln("couldn't open stdout on command:", err)
+			log.Fatalln("FATAL couldn't open stdout on command:", err)
 		}
 		if err := cmd.Start(); err != nil {
-			log.Fatalln("couldn't start command:", err)
+			log.Fatalln("FATAL couldn't start command:", err)
 		}
 		defer stdout.Close()
 
@@ -221,7 +221,7 @@ func Main() {
 				quit()
 			}
 		case <-sigs:
-			log.Printf("Received SIGINT or SIGTERM, exiting")
+			log.Printf("INFO  Received SIGINT/SIGTERM, exiting")
 			quit()
 		}
 	}
@@ -235,7 +235,7 @@ func quit() {
 	// wait for them to complete
 	wgActions.Wait()
 	// delete pipe
-	os.Remove(PipePath())
+	os.Remove(SocketPath())
 
 	os.Exit(3)
 }
