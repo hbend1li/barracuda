@@ -248,7 +248,7 @@ func (c *Conf) updateFromDB() *gob.Encoder {
 	}
 }
 
-func parseConf(filename string) (*Conf, *gob.Encoder) {
+func parseConf(filename string) *Conf {
 
 	data, err := os.ReadFile(filename)
 	if err != nil {

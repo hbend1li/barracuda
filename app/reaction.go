@@ -24,10 +24,10 @@ func cmdStdout(commandline []string) chan *string {
 		cmd := exec.Command(commandline[0], commandline[1:]...)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			log.Fatal("couldn't open stdout on command:", err)
+			log.Fatalln("couldn't open stdout on command:", err)
 		}
 		if err := cmd.Start(); err != nil {
-			log.Fatal("couldn't start command:", err)
+			log.Fatalln("couldn't start command:", err)
 		}
 		defer stdout.Close()
 
@@ -77,14 +77,17 @@ func sleep(d time.Duration) chan bool {
 func (a *Action) exec(match string, advance time.Duration) {
 	defer wgActions.Done()
 
-	// Wait for either end of sleep time, or stopActions channel being closed
+	// Wait for either end of sleep time, or actionStore requesting stop
 	if a.afterDuration != 0 && a.afterDuration > advance {
+		stopAction := actionStore.Register(a, match)
 		select {
 		case <-sleep(a.afterDuration - advance):
 			// no-op
-		case _, _ = <-stopActions:
+		case _, _ = <-stopAction:
 			// no-op
 		}
+		// Let's not wait for the lock
+		go actionStore.Unregister(a, match, stopAction)
 	}
 
 	computedCommand := make([]string, 0, len(a.Cmd))
@@ -174,7 +177,7 @@ func (s *Stream) handle(endedSignal chan *Stream) {
 }
 
 var stopStreams chan bool
-var stopActions chan bool
+var actionStore ActionStore
 var wgActions sync.WaitGroup
 
 var db *gob.Encoder
@@ -188,6 +191,8 @@ func Main() {
 		os.Exit(2)
 	}
 
+	actionStore.store = make(ActionMap)
+
 	conf := parseConf(*confFilename)
 	db = conf.updateFromDB()
 
@@ -197,7 +202,6 @@ func Main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	stopStreams = make(chan bool)
-	stopActions = make(chan bool)
 
 	endSignals := make(chan *Stream)
 	noStreamsInExecution := len(conf.Streams)
@@ -205,6 +209,8 @@ func Main() {
 	for _, stream := range conf.Streams {
 		go stream.handle(endSignals)
 	}
+
+	go Serve()
 
 	for {
 		select {
@@ -225,9 +231,11 @@ func quit() {
 	// stop all streams
 	close(stopStreams)
 	// stop all actions
-	close(stopActions)
+	actionStore.Quit()
 	// wait for them to complete
 	wgActions.Wait()
+	// delete pipe
+	os.Remove(PipePath())
 
 	os.Exit(3)
 }

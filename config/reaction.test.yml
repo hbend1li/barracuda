@@ -4,7 +4,7 @@ patterns:
 
 streams:
   tailDown:
-    cmd: [ "sh", "-c", "echo 'found 1.1.1.1' && sleep 2s && echo 'found 1.1.1.2' && sleep 2s && echo 'found 1.1.1.1' && sleep 1s" ]
+    cmd: [ "sh", "-c", "echo 'found 1.1.1.1' && sleep 2s && echo 'found 1.1.1.2' && sleep 2s && echo 'found 1.1.1.1' && sleep 10m" ]
     filters:
       findIP:
         regex:
@@ -16,4 +16,4 @@ streams:
             cmd: [ "echo", "<ip>" ]
           sleepdamn:
             cmd: [ "echo", "sleep", "<ip>" ]
-            after: 10s
+            after: 8m
