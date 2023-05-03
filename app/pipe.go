@@ -3,11 +3,11 @@ package app
 import (
 	"encoding/gob"
 	"errors"
-	"io/fs"
 	"log"
 	"os"
 	"sync"
 	"syscall"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -111,7 +111,7 @@ func (r ReadableMap) ToString() string {
 
 // Pipe-related, server-related functions
 
-func createOpenPipe() fs.File {
+func createOpenPipe() *os.File {
 	err := os.Mkdir(RuntimeDirectory(), 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		log.Fatalln("FATAL Failed to create runtime directory", err)
@@ -156,7 +156,19 @@ func Serve() {
 		var request Request
 		err := gob.NewDecoder(pipe).Decode(&request)
 		if err != nil {
-			log.Println("WARN  Invalid Message received: ", err)
+			d, _ := time.ParseDuration("1s")
+			if err.Error() == "EOF" {
+				log.Println("DEBUG received EOF, seeking one byte")
+				_, err = pipe.Seek(1, 1)
+				if err != nil {
+					log.Println("DEBUG failed to seek:", err)
+				}
+				time.Sleep(d)
+				continue
+			}
+			log.Println("WARN  Invalid Message received:", err)
+			time.Sleep(d)
+			continue
 		}
 		go func(request Request) {
 			var response Response

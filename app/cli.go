@@ -45,7 +45,7 @@ func (r Request) ResponsePath() string {
 
 func Send(data Request) {
 	pipePath := PipePath()
-	pipe, err := os.OpenFile(pipePath, os.O_APPEND, os.ModeNamedPipe)
+	pipe, err := os.OpenFile(pipePath, os.O_RDWR, os.ModeNamedPipe)
 	if err != nil {
 		log.Println("Failed to open", pipePath, ":", err)
 		log.Fatalln("Is the reaction daemon running? Does the CLI run as the same user?")
