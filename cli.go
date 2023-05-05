@@ -1,7 +1,7 @@
 package main
 
 import (
-	"reaction/app"
+	"framagit.org/ppom/reaction/app"
 )
 
 func main() {
