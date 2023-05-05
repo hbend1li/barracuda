@@ -78,7 +78,7 @@ func (c *Conf) setup() {
 		stream.name = streamName
 
 		if len(stream.Filters) == 0 {
-			log.Fatalln("FATAL Bad configuration: no filters configured in '%s'!", stream.name)
+			log.Fatalln("FATAL Bad configuration: no filters configured in", stream.name)
 		}
 		for filterName := range stream.Filters {
 
@@ -88,14 +88,20 @@ func (c *Conf) setup() {
 			filter.matches = make(map[string][]time.Time)
 
 			// Parse Duration
-			retryDuration, err := time.ParseDuration(filter.RetryPeriod)
-			if err != nil {
-				log.Fatalln("FATAL Bad configuration: Failed to parse time:", err)
+			if filter.RetryPeriod == "" {
+				if filter.Retry > 1 {
+					log.Fatalln("FATAL Bad configuration: retry but no retry-duration in", stream.name, ".", filter.name)
+				}
+			} else {
+				retryDuration, err := time.ParseDuration(filter.RetryPeriod)
+				if err != nil {
+					log.Fatalln("FATAL Bad configuration: Failed to parse retry time in", stream.name, ".", filter.name, ":", err)
+				}
+				filter.retryDuration = retryDuration
 			}
-			filter.retryDuration = retryDuration
 
 			if len(filter.Regex) == 0 {
-				log.Fatalln("FATAL Bad configuration: no regexes configured in '%s.%s'!", stream.name, filter.name)
+				log.Fatalln("FATAL Bad configuration: no regexes configured in", stream.name, ".", filter.name)
 			}
 			// Compute Regexes
 			// Look for Patterns inside Regexes
@@ -123,7 +129,7 @@ func (c *Conf) setup() {
 			}
 
 			if len(filter.Actions) == 0 {
-				log.Fatalln("FATAL Bad configuration: no actions configured in '%s.%s'!", stream.name, filter.name)
+				log.Fatalln("FATAL Bad configuration: no actions configured in", stream.name, ".", filter.name)
 			}
 			for actionName := range filter.Actions {
 
@@ -135,7 +141,7 @@ func (c *Conf) setup() {
 				if action.After != "" {
 					afterDuration, err := time.ParseDuration(action.After)
 					if err != nil {
-						log.Fatalln("FATAL Bad configuration: Failed to parse time:", err)
+						log.Fatalln("FATAL Bad configuration: Failed to parse after time in ", stream.name, ".", filter.name, ".", action.name, ":", err)
 					}
 					action.afterDuration = afterDuration
 				}

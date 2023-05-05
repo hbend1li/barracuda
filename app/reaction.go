@@ -124,11 +124,13 @@ func (f *Filter) handle() chan *string {
 
 				entry := LogEntry{time.Now(), match, f.stream.name, f.name, false}
 
-				f.cleanOldMatches(match)
+				if f.Retry > 1 {
+					f.cleanOldMatches(match)
 
-				f.matches[match] = append(f.matches[match], time.Now())
+					f.matches[match] = append(f.matches[match], time.Now())
+				}
 
-				if len(f.matches[match]) >= f.Retry {
+				if f.Retry <= 1 || len(f.matches[match]) >= f.Retry {
 					entry.Exec = true
 					delete(f.matches, match)
 					f.execActions(match, time.Duration(0))
