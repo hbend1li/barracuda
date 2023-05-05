@@ -23,12 +23,10 @@ type Response struct {
 	Actions ReadableMap
 }
 
-func SocketPath() string {
-	return fmt.Sprintf("/run/user/%v/reaction.sock", os.Getuid())
-}
+const SocketPath = "/run/reaction/reaction.sock"
 
 func SendAndRetrieve(data Request) Response {
-	conn, err := net.Dial("unix", SocketPath())
+	conn, err := net.Dial("unix", SocketPath)
 	if err != nil {
 		log.Fatalln("Error opening connection top daemon:", err)
 	}

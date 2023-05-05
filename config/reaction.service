@@ -2,6 +2,7 @@
 [Unit]
 WantedBy=multi-user.target
 
+# See `man systemd.exec` and `man systemd.service` for most options below
 [Service]
 ExecStart=/path/to/reaction -c /etc/reaction.yml
 
@@ -24,5 +25,7 @@ ExecStopPost=/path/to/iptables -w -X reaction
 
 # Ask systemd to create /var/lib/reaction (/var/lib/ is implicit)
 StateDirectory=reaction
+# Ask systemd to create /run/reaction at runtime (/run/ is implicit)
+RuntimeDirectory=reaction
 # Start reaction in its state directory
 WorkingDirectory=/var/lib/reaction

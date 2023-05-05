@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -110,18 +111,21 @@ func (r ReadableMap) ToString() string {
 // Socket-related, server-related functions
 
 func createOpenSocket() net.Listener {
-	socketPath := SocketPath()
-	_, err := os.Stat(socketPath)
+	err := os.MkdirAll(path.Dir(SocketPath), 0755)
+	if err != nil {
+		log.Fatalln("FATAL Failed to create socket directory")
+	}
+	_, err = os.Stat(SocketPath)
 	if err == nil {
-		log.Println("WARN  socket", socketPath, "already exists: Is the daemon already running? Deleting.")
-		err = os.Remove(socketPath)
+		log.Println("WARN  socket", SocketPath, "already exists: Is the daemon already running? Deleting.")
+		err = os.Remove(SocketPath)
 		if err != nil {
-			log.Println("FATAL Failed to remove socket:", err)
+			log.Fatalln("FATAL Failed to remove socket:", err)
 		}
 	}
-	ln, err := net.Listen("unix", socketPath)
+	ln, err := net.Listen("unix", SocketPath)
 	if err != nil {
-		log.Println("FATAL Failed to create socket:", err)
+		log.Fatalln("FATAL Failed to create socket:", err)
 	}
 	return ln
 }

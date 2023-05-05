@@ -65,6 +65,7 @@ ExecStopPost=/path/to/iptables -w -F reaction
 ExecStopPost=/path/to/iptables -w -X reaction
 
 StateDirectory=reaction
+RuntimeDirectory=reaction
 WorkingDirectory=/var/lib/reaction
 ```
 See [reaction.service](./config/reaction.service) and [reaction.yml](./config/reaction.yml) for the fully commented examples.
@@ -73,6 +74,10 @@ See [reaction.service](./config/reaction.service) and [reaction.yml](./config/re
 
 the working directory of `reaction` will be used to create and read from the embedded database.
 if you don't know where to start it, `/var/lib/reaction` should be a sane choice.
+
+### socket
+
+the socket allowing communication between the cli and server will be created at `/run/reaction/reaction.socket`.
 
 ### terminology
 

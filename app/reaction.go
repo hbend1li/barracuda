@@ -235,7 +235,10 @@ func quit() {
 	// wait for them to complete
 	wgActions.Wait()
 	// delete pipe
-	os.Remove(SocketPath())
+	err := os.Remove(SocketPath)
+	if err != nil {
+		log.Println("Failed to remove socket:", err)
+	}
 
 	os.Exit(3)
 }
