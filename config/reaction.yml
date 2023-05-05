@@ -41,4 +41,4 @@ streams:
             cmd:  *iptablesunban
             # if after is defined, the action will not take place immediately, but after a specified duration.
             # same format as retry-period
-            after: 2d
+            after: 48h

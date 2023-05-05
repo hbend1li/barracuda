@@ -43,7 +43,7 @@ streams:
             cmd: *iptablesban
           unban:
             cmd:  *iptablesunban
-            after: 2d
+            after: 48h
 ```
 
 `/etc/systemd/system/reaction.service`
