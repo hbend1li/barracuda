@@ -56,6 +56,8 @@ ExecStart=/path/to/reaction -c /etc/reaction.yml
 
 ExecStartPre=/path/to/iptables -w -N reaction
 ExecStartPre=/path/to/iptables -w -A reaction -j ACCEPT
+ExecStartPre=/path/to/iptables -w -I reaction 1 -s 127.0.0.1 -j ACCEPT
+ExecStartPre=/path/to/iptables -w -I reaction 1 -s ::1 -j ACCEPT
 ExecStartPre=/path/to/iptables -w -I INPUT -p all -j reaction
 
 ExecStopPost=/path/to/iptables -w -D INPUT -p all -j reaction
@@ -69,7 +71,7 @@ See [reaction.service](./config/reaction.service) and [reaction.yml](./config/re
 
 ### database
 
-the working directory of `reaction` will be used to create and read from the embedded [lmdb](https://www.symas.com/lmdb) database.
+the working directory of `reaction` will be used to create and read from the embedded database.
 if you don't know where to start it, `/var/lib/reaction` should be a sane choice.
 
 ### terminology
