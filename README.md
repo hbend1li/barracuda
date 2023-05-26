@@ -1,12 +1,12 @@
 # reaction
 
-🚧 this program has not been tested in production yet 🚧
-
 a program that scans program outputs, such as logs,
 for repeated patterns, such as failed login attempts,
 and takes action, such as banning ips.
 
 (adapted from [fail2ban](http://fail2ban.org)'s presentation 😄)
+
+🚧 this program hasn't received external audit. however, it already works well on my servers 🚧
 
 ## rationale
 
@@ -57,7 +57,6 @@ ExecStart=/path/to/reaction -c /etc/reaction.yml
 ExecStartPre=/path/to/iptables -w -N reaction
 ExecStartPre=/path/to/iptables -w -A reaction -j ACCEPT
 ExecStartPre=/path/to/iptables -w -I reaction 1 -s 127.0.0.1 -j ACCEPT
-ExecStartPre=/path/to/iptables -w -I reaction 1 -s ::1 -j ACCEPT
 ExecStartPre=/path/to/iptables -w -I INPUT -p all -j reaction
 
 ExecStopPost=/path/to/iptables -w -D INPUT -p all -j reaction
@@ -92,3 +91,14 @@ the socket allowing communication between the cli and server will be created at 
 ```shell
 $ go build .
 ```
+
+### nixos
+
+in addition to the [package](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/pkgs/reaction/default.nix)
+and [module](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction.nix)
+that i didn't tried to upstream to nixpkgs yet (although they are ready), i use extensively reaction on my servers. if you're using nixos,
+consider reading and building upon [my own building blocks](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-variables.nix),
+[my own non-root reaction conf, including conf for SSH, port scanning & Nginx common attack URLS](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-custom.nix),
+and the configuration for [nextcloud](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/file.ppom.me.nix#L53),
+[vaultwarden](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/vaultwarden.nix#L45),
+and [maddy](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/mail.nix#L74). see also an [example](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/mail.nix#L85) where it does something else than banning IPs.
