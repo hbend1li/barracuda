@@ -50,9 +50,9 @@ func (a *ActionStore) Quit() {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	for _, actions := range a.store {
-		for _, sigs := range actions {
+		for action, sigs := range actions {
 			for sig := range sigs {
-				close(sig)
+				sig <- action.OnExit
 			}
 		}
 	}

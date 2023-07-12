@@ -56,6 +56,8 @@ type Action struct {
 
 	After         string        `yaml:"after"`
 	afterDuration time.Duration `yaml:"-"`
+
+	OnExit bool `yaml:"onexit"`
 }
 
 type LogEntry struct {
@@ -144,6 +146,8 @@ func (c *Conf) setup() {
 						log.Fatalln("FATAL Bad configuration: Failed to parse after time in ", stream.name, ".", filter.name, ".", action.name, ":", err)
 					}
 					action.afterDuration = afterDuration
+				} else if action.OnExit {
+					log.Fatalln("FATAL Bad configuration: Cannot have `onexit:true` without an `after` directive in", stream.name, ".", filter.name, ".", action.name)
 				}
 				if filter.longuestActionDuration == nil || filter.longuestActionDuration.Milliseconds() < action.afterDuration.Milliseconds() {
 					filter.longuestActionDuration = &action.afterDuration

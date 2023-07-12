@@ -76,6 +76,7 @@ func sleep(d time.Duration) chan bool {
 
 func (a *Action) exec(match string, advance time.Duration) {
 	defer wgActions.Done()
+	doExec := true
 
 	// Wait for either end of sleep time, or actionStore requesting stop
 	if a.afterDuration != 0 && a.afterDuration > advance {
@@ -83,24 +84,26 @@ func (a *Action) exec(match string, advance time.Duration) {
 		select {
 		case <-sleep(a.afterDuration - advance):
 			// no-op
-		case _, _ = <-stopAction:
+		case doExec = <-stopAction:
 			// no-op
 		}
 		// Let's not wait for the lock
 		go actionStore.Unregister(a, match, stopAction)
 	}
 
-	computedCommand := make([]string, 0, len(a.Cmd))
-	for _, item := range a.Cmd {
-		computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.patternWithBraces, match))
-	}
+	if doExec {
+		computedCommand := make([]string, 0, len(a.Cmd))
+		for _, item := range a.Cmd {
+			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.patternWithBraces, match))
+		}
 
-	log.Printf("INFO  %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
+		log.Printf("INFO  %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
 
-	cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
+		cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
 
-	if ret := cmd.Run(); ret != nil {
-		log.Printf("ERROR %s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
+		if ret := cmd.Run(); ret != nil {
+			log.Printf("ERROR %s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
+		}
 	}
 }
 

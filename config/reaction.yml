@@ -1,5 +1,4 @@
 ---
-# TODO heavily comment this file
 # definitions are just a place to put chunks of conf you want to reuse in another place
 # they're not readed by reaction
 definitions:
@@ -42,3 +41,8 @@ streams:
             # if after is defined, the action will not take place immediately, but after a specified duration.
             # same format as retry-period
             after: 48h
+            # let's say reaction is quitting. does it run all those pending commands which had an `after` duration set?
+            # if you want reaction to run those pending commands before exiting, you can set this:
+            # onexit: true
+            # (defaults to false)
+            # here it is not useful because we will flush the chain containing the bans anyway (see ./reaction.service)

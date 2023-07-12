@@ -17,3 +17,4 @@ streams:
           sleepdamn:
             cmd: [ "echo", "sleep", "<ip>" ]
             after: 8m
+            onexit: true
