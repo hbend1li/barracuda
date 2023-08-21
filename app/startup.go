@@ -15,8 +15,16 @@ import (
 )
 
 type Conf struct {
-	Patterns map[string]string  `yaml:"patterns"`
-	Streams  map[string]*Stream `yaml:"streams"`
+	Patterns map[string]*Pattern `yaml:"patterns"`
+	Streams  map[string]*Stream  `yaml:"streams"`
+}
+
+type Pattern struct {
+	Regex  string   `yaml:"regex"`
+	Ignore []string `yaml:"ignore"`
+
+	name           string `yaml:"-"`
+	nameWithBraces string `yaml:"-"`
 }
 
 // Stream, Filter & Action structures must never be copied.
@@ -33,10 +41,9 @@ type Filter struct {
 	stream *Stream `yaml:"-"`
 	name   string  `yaml:"-"`
 
-	Regex             []string        `yaml:"regex"`
-	compiledRegex     []regexp.Regexp `yaml:"-"`
-	patternName       string          `yaml:"-"`
-	patternWithBraces string          `yaml:"-"`
+	Regex         []string        `yaml:"regex"`
+	compiledRegex []regexp.Regexp `yaml:"-"`
+	pattern       *Pattern        `yaml:"-"`
 
 	Retry         int           `yaml:"retry"`
 	RetryPeriod   string        `yaml:"retry-period"`
@@ -68,9 +75,28 @@ type LogEntry struct {
 }
 
 func (c *Conf) setup() {
-	for patternName, pattern := range c.Patterns {
-		c.Patterns[patternName] = fmt.Sprintf("(?P<%s>%s)", patternName, pattern)
+
+	for patternName := range c.Patterns {
+		pattern := c.Patterns[patternName]
+		pattern.name = patternName
+		pattern.nameWithBraces = fmt.Sprintf("<%s>", pattern.name)
+
+		if pattern.Regex == "" {
+			log.Fatalf("FATAL Bad configuration: pattern's regex %v is empty!", patternName)
+		}
+
+		compiled, err := regexp.Compile(fmt.Sprintf("^%v$", pattern.Regex))
+		if err != nil {
+			log.Fatalf("FATAL Bad configuration: pattern %v doesn't compile!", patternName)
+		}
+		c.Patterns[patternName].Regex = fmt.Sprintf("(?P<%s>%s)", patternName, pattern.Regex)
+		for _, ignore := range pattern.Ignore {
+			if !compiled.MatchString(ignore) {
+				log.Fatalf("FATAL Bad configuration: pattern ignore '%v' doesn't match pattern %v! It should be fixed or removed.", ignore, pattern.nameWithBraces)
+			}
+		}
 	}
+
 	if len(c.Streams) == 0 {
 		log.Fatalln("FATAL Bad configuration: no streams configured!")
 	}
@@ -109,24 +135,24 @@ func (c *Conf) setup() {
 			// Look for Patterns inside Regexes
 			for _, regex := range filter.Regex {
 				for patternName, pattern := range c.Patterns {
-					if strings.Contains(regex, patternName) {
+					if strings.Contains(regex, pattern.nameWithBraces) {
 
-						switch filter.patternName {
-						case "":
-							filter.patternName = patternName
-							filter.patternWithBraces = fmt.Sprintf("<%s>", patternName)
-						case patternName:
+						if filter.pattern == nil {
+							filter.pattern = pattern
+						} else if filter.pattern == pattern {
 							// no op
-						default:
+						} else {
 							log.Fatalf(
 								"Bad configuration: Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
-								filter.patternName, patternName, streamName, filterName,
+								filter.pattern.name, patternName, streamName, filterName,
 							)
 						}
 
-						regex = strings.Replace(regex, fmt.Sprintf("<%s>", patternName), pattern, 1)
+						// FIXME should go in the `if filter.pattern == nil`?
+						regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 					}
 				}
+				// TODO regexp.Compile and show proper message if it doesn't instead of panicing
 				filter.compiledRegex = append(filter.compiledRegex, *regexp.MustCompile(regex))
 			}
 

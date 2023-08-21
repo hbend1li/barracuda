@@ -42,16 +42,27 @@ func cmdStdout(commandline []string) chan *string {
 	return lines
 }
 
+func (p *Pattern) notAnIgnore(match *string) bool {
+	for _, ignore := range p.Ignore {
+		if ignore == *match {
+			return false
+		}
+	}
+	return true
+}
+
 // Whether one of the filter's regexes is matched on a line
 func (f *Filter) match(line *string) string {
 	for _, regex := range f.compiledRegex {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
 
-			match := matches[regex.SubexpIndex(f.patternName)]
+			match := matches[regex.SubexpIndex(f.pattern.name)]
 
-			log.Printf("INFO  %s.%s: match [%v]\n", f.stream.name, f.name, match)
-			return match
+			if f.pattern.notAnIgnore(&match) {
+				log.Printf("INFO  %s.%s: match [%v]\n", f.stream.name, f.name, match)
+				return match
+			}
 		}
 	}
 	return ""
@@ -94,7 +105,7 @@ func (a *Action) exec(match string, advance time.Duration) {
 	if doExec {
 		computedCommand := make([]string, 0, len(a.Cmd))
 		for _, item := range a.Cmd {
-			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.patternWithBraces, match))
+			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
 		}
 
 		log.Printf("INFO  %s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)

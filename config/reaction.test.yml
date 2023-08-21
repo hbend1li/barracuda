@@ -1,20 +1,19 @@
 ---
 patterns:
-  ip: '(([0-9]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
+  ip:
+    regex: '(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})'
+    ignore:
+      - 1.0.0.1
 
 streams:
   tailDown:
-    cmd: [ "sh", "-c", "echo 'found 1.1.1.1' && sleep 2s && echo 'found 1.1.1.2' && sleep 2s && echo 'found 1.1.1.1' && sleep 10m" ]
+    cmd: [ "sh", "-c", "echo 'found 1.1.1.1' && sleep 2 && echo 'found 1.0.0.1' && sleep 10m" ]
     filters:
       findIP:
         regex:
-          - found <ip>
+          - '^found <ip>'
         retry: 2
         retry-period: 1m
         actions:
           damn:
             cmd: [ "echo", "<ip>" ]
-          sleepdamn:
-            cmd: [ "echo", "sleep", "<ip>" ]
-            after: 8m
-            onexit: true
