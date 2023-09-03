@@ -20,7 +20,7 @@ and an always-running daemon should be implemented in a fast language.
 
 this configuration file is all that should be needed to prevent bruteforce attacks on an ssh server.
 
-see [reaction.service](./config/reaction.service) and [reaction.yml](./config/reaction.yml) for the fully explained examples.
+see [reaction.service](./config/reaction.service) and [reaction.yml](./app/reaction.yml) for the fully explained examples.
 
 `/etc/reaction.yml`
 ```yaml
