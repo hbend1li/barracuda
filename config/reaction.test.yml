@@ -17,3 +17,6 @@ streams:
         actions:
           damn:
             cmd: [ "echo", "<ip>" ]
+          undamn:
+            cmd: [ "echo", "undamn", "<ip>" ]
+            after: 1m

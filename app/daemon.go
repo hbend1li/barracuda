@@ -3,7 +3,6 @@ package app
 import (
 	"bufio"
 	"encoding/gob"
-	"flag"
 	"syscall"
 
 	// "fmt"
@@ -198,18 +197,10 @@ var wgActions sync.WaitGroup
 
 var db *gob.Encoder
 
-func Main() {
-	confFilename := flag.String("c", "", "configuration file. see an example at https://framagit.org/ppom/reaction/-/blob/main/reaction.yml")
-	flag.Parse()
-
-	if *confFilename == "" {
-		flag.PrintDefaults()
-		os.Exit(2)
-	}
-
+func Daemon(confFilename string) {
 	actionStore.store = make(ActionMap)
 
-	conf := parseConf(*confFilename)
+	conf := parseConf(confFilename)
 	db = conf.updateFromDB()
 
 	// Ready to start
@@ -226,7 +217,7 @@ func Main() {
 		go stream.handle(endSignals)
 	}
 
-	go Serve()
+	go ServeSocket()
 
 	for {
 		select {
@@ -251,7 +242,7 @@ func quit() {
 	// wait for them to complete
 	wgActions.Wait()
 	// delete pipe
-	err := os.Remove(SocketPath)
+	err := os.Remove(*SocketPath)
 	if err != nil {
 		log.Println("Failed to remove socket:", err)
 	}

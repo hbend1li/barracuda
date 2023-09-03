@@ -173,7 +173,7 @@ func (c *Conf) setup() {
 					}
 					action.afterDuration = afterDuration
 				} else if action.OnExit {
-					log.Fatalln("FATAL Bad configuration: Cannot have `onexit:true` without an `after` directive in", stream.name, ".", filter.name, ".", action.name)
+					log.Fatalln("FATAL Bad configuration: Cannot have `onexit: true` without an `after` directive in", stream.name, ".", filter.name, ".", action.name)
 				}
 				if filter.longuestActionDuration == nil || filter.longuestActionDuration.Milliseconds() < action.afterDuration.Milliseconds() {
 					filter.longuestActionDuration = &action.afterDuration

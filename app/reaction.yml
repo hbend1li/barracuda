@@ -1,0 +1,54 @@
+---
+# definitions are just a place to put chunks of conf you want to reuse in another place
+# they're not readed by reaction
+definitions:
+  - &iptablesban [ "iptables" "-w" "-A" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+  - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+
+# patterns are substitued in regexes.
+# when a filter performs an action, it replaces the found pattern
+patterns:
+  ip:
+    # reaction regex syntax is defined here: https://github.com/google/re2/wiki/Syntax
+    regex: '(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})'
+    ignore:
+      - 127.0.0.1
+      - ::1
+
+# streams are command that are run
+# their output will be used by one or more filters
+streams:
+  # streams have a user-defined name
+  ssh:
+    # note that if the command is not in environment's `PATH`
+    # its full path must be given.
+    cmd: [ "journalctl" "-fu" "sshd.service" ]
+    # filters are a set of regexes on a stream
+    # when a regex matches, it will trigger the filter's actions
+    filters:
+      # filters have a user-defined name
+      failedlogin:
+        # reaction regex syntax is defined here: https://github.com/google/re2/wiki/Syntax
+        regex:
+          - authentication failure;.*rhost=<ip>
+        # if retry and retry-period are defined,
+        # the actions will only take place if a same pattern is
+        # found `retry` times in a `retry-period` interval
+        retry: 3
+        # format is defined here: https://pkg.go.dev/time#ParseDuration
+        retry-period: 6h
+        actions:
+          # actions have a user-defined name
+          ban:
+            # YAML substitutes *reference by the value at &reference
+            cmd: *iptablesban
+          unban:
+            cmd:  *iptablesunban
+            # if after is defined, the action will not take place immediately, but after a specified duration.
+            # same format as retry-period
+            after: 48h
+            # let's say reaction is quitting. does it run all those pending commands which had an `after` duration set?
+            # if you want reaction to run those pending commands before exiting, you can set this:
+            # onexit: true
+            # (defaults to false)
+            # here it is not useful because we will flush the chain containing the bans anyway (see ./reaction.service)

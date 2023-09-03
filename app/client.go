@@ -1,11 +1,13 @@
 package app
 
 import (
+	"bufio"
 	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"regexp"
 )
 
 const (
@@ -21,12 +23,11 @@ type Request struct {
 type Response struct {
 	Err     error
 	Actions ReadableMap
+	Number  int
 }
 
-const SocketPath = "/run/reaction/reaction.sock"
-
 func SendAndRetrieve(data Request) Response {
-	conn, err := net.Dial("unix", SocketPath)
+	conn, err := net.Dial("unix", *SocketPath)
 	if err != nil {
 		log.Fatalln("Error opening connection top daemon:", err)
 	}
@@ -50,26 +51,37 @@ func usage(err string) {
 	log.Fatalln(err)
 }
 
-func CLI() {
-	if len(os.Args) <= 1 {
-		response := SendAndRetrieve(Request{Query, ""})
-		if response.Err != nil {
-			log.Fatalln("Received error from daemon:", response.Err)
-		}
-		fmt.Println(response.Actions.ToString())
-		os.Exit(0)
+func ClientQuery(streamfilter string) {
+	response := SendAndRetrieve(Request{Query, streamfilter})
+	if response.Err != nil {
+		log.Fatalln("Received error from daemon:", response.Err)
+		os.Exit(1)
 	}
-	switch os.Args[1] {
-	case "flush":
-		if len(os.Args) != 3 {
-			usage("flush takes one <PATTERN> argument")
-		}
-		response := SendAndRetrieve(Request{Flush, os.Args[2]})
-		if response.Err != nil {
-			log.Fatalln("Received error from daemon:", response.Err)
-		}
-		os.Exit(0)
-	default:
-		usage("first argument must be `flush`")
+	fmt.Println(response.Actions.ToString())
+	os.Exit(0)
+}
+
+func ClientFlush(pattern, streamfilter string) {
+	response := SendAndRetrieve(Request{Flush, pattern})
+	if response.Err != nil {
+		log.Fatalln("Received error from daemon:", response.Err)
+		os.Exit(1)
+	}
+	fmt.Printf("flushed pattern %v times\n", response.Number)
+	os.Exit(0)
+}
+
+func Match(reg *regexp.Regexp, line string) {
+	if reg.MatchString(line) {
+		fmt.Printf("\033[32mmatching\033[0m: %v\n", line)
+	} else {
+		fmt.Printf("\033[31mno match\033[0m: %v\n", line)
+	}
+}
+
+func MatchStdin(reg *regexp.Regexp) {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		Match(reg, scanner.Text())
 	}
 }

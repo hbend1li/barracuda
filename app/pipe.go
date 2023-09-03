@@ -60,17 +60,20 @@ func (a *ActionStore) Quit() {
 }
 
 // Called by a CLI
-func (a *ActionStore) Flush(pattern string) {
+func (a *ActionStore) Flush(pattern string) int {
+	var cpt int
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	if a.store[pattern] != nil {
 		for _, action := range a.store[pattern] {
 			for sig := range action {
-				close(sig)
+				sig <- true
 			}
+			cpt++
 		}
 	}
 	delete(a.store, pattern)
+	return cpt
 }
 
 // Called by a CLI
@@ -111,19 +114,19 @@ func (r ReadableMap) ToString() string {
 // Socket-related, server-related functions
 
 func createOpenSocket() net.Listener {
-	err := os.MkdirAll(path.Dir(SocketPath), 0755)
+	err := os.MkdirAll(path.Dir(*SocketPath), 0755)
 	if err != nil {
 		log.Fatalln("FATAL Failed to create socket directory")
 	}
-	_, err = os.Stat(SocketPath)
+	_, err = os.Stat(*SocketPath)
 	if err == nil {
 		log.Println("WARN  socket", SocketPath, "already exists: Is the daemon already running? Deleting.")
-		err = os.Remove(SocketPath)
+		err = os.Remove(*SocketPath)
 		if err != nil {
 			log.Fatalln("FATAL Failed to remove socket:", err)
 		}
 	}
-	ln, err := net.Listen("unix", SocketPath)
+	ln, err := net.Listen("unix", *SocketPath)
 	if err != nil {
 		log.Fatalln("FATAL Failed to create socket:", err)
 	}
@@ -131,7 +134,7 @@ func createOpenSocket() net.Listener {
 }
 
 // Handle connections
-func Serve() {
+func ServeSocket() {
 	ln := createOpenSocket()
 	defer ln.Close()
 	for {
@@ -154,7 +157,7 @@ func Serve() {
 			case Query:
 				response.Actions = actionStore.store.ToReadable()
 			case Flush:
-				actionStore.Flush(request.Pattern)
+				response.Number = actionStore.Flush(request.Pattern)
 			default:
 				log.Println("ERROR Invalid Message from cli: unrecognised Request type")
 				return
