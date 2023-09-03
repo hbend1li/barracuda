@@ -15,7 +15,9 @@ patterns:
       - 127.0.0.1
       - ::1
 
-# streams are command that are run
+# streams are commands
+# they're run and their ouptut is captured
+# *example:* `tail -f /var/log/nginx/access.log`
 # their output will be used by one or more filters
 streams:
   # streams have a user-defined name
@@ -23,13 +25,14 @@ streams:
     # note that if the command is not in environment's `PATH`
     # its full path must be given.
     cmd: [ "journalctl" "-fu" "sshd.service" ]
-    # filters are a set of regexes on a stream
-    # when a regex matches, it will trigger the filter's actions
+    # filters run actions when they match regexes on a stream
     filters:
       # filters have a user-defined name
       failedlogin:
-        # reaction regex syntax is defined here: https://github.com/google/re2/wiki/Syntax
+        # reaction's regex syntax is defined here: https://github.com/google/re2/wiki/Syntax
         regex:
+          # <ip> is predefined in the patterns section
+          # ip's regex is inserted in the following regex
           - authentication failure;.*rhost=<ip>
         # if retry and retry-period are defined,
         # the actions will only take place if a same pattern is
@@ -37,6 +40,7 @@ streams:
         retry: 3
         # format is defined here: https://pkg.go.dev/time#ParseDuration
         retry-period: 6h
+        # actions are run by the filter when regexes are matched
         actions:
           # actions have a user-defined name
           ban:
@@ -44,11 +48,11 @@ streams:
             cmd: *iptablesban
           unban:
             cmd:  *iptablesunban
-            # if after is defined, the action will not take place immediately, but after a specified duration.
+            # if after is defined, the action will not take place immediately, but after a specified duration
             # same format as retry-period
             after: 48h
             # let's say reaction is quitting. does it run all those pending commands which had an `after` duration set?
             # if you want reaction to run those pending commands before exiting, you can set this:
-            # onexit: true
+            onexit: true
             # (defaults to false)
             # here it is not useful because we will flush the chain containing the bans anyway (see ./reaction.service)

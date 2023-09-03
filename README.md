@@ -13,12 +13,14 @@ and takes action, such as banning ips.
 i was using fail2ban since quite a long time, but i was a bit frustrated by it's cpu consumption
 and all its heavy default configuration.
 
-in my view, a security-oriented program should be simple to configure (`sudo` is a very bad exemple!)
+in my view, a security-oriented program should be simple to configure (`sudo` is a very bad example!)
 and an always-running daemon should be implemented in a fast language.
 
 ## configuration
 
 this configuration file is all that should be needed to prevent bruteforce attacks on an ssh server.
+
+see [reaction.service](./config/reaction.service) and [reaction.yml](./config/reaction.yml) for the fully explained examples.
 
 `/etc/reaction.yml`
 ```yaml
@@ -67,7 +69,6 @@ StateDirectory=reaction
 RuntimeDirectory=reaction
 WorkingDirectory=/var/lib/reaction
 ```
-See [reaction.service](./config/reaction.service) and [reaction.yml](./config/reaction.yml) for the fully commented examples.
 
 ### database
 
@@ -78,16 +79,9 @@ if you don't know where to start it, `/var/lib/reaction` should be a sane choice
 
 the socket allowing communication between the cli and server will be created at `/run/reaction/reaction.socket`.
 
-### terminology
-
-- **streams** are commands. they're run and their ouptut is captured. *example:* `tail -f /var/log/nginx/access.log`
-  - **filters** belong to a **stream**. they run actions when they match **regexes**.
-    - **regexes** are regexes. *example:* `login failed from user .* from ip <ip>`
-      - **patterns** are also regexes. they're inserted inside **regexes**. example: `ip: ([0-9]{,3}.)[0-9]{,3}`
-    - **actions** are commands. example: `["echo" "matched <ip>"]`
-
 ### compilation
 
+you'll need the go toolchain.
 ```shell
 $ go build .
 ```
