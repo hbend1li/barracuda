@@ -27,24 +27,19 @@ func addBoolFlag(names []string, f *flag.FlagSet) *bool {
 var SocketPath *string
 
 func addSocketFlag(f *flag.FlagSet) *string {
-	return addStringFlag(
-		[]string{"s", "socket"},
-		"/run/reaction/reaction.sock",
-		f)
+	return addStringFlag([]string{"s", "socket"}, "/run/reaction/reaction.sock", f)
 }
 
 func addConfFlag(f *flag.FlagSet) *string {
-	return addStringFlag(
-		[]string{"c", "config"},
-		"",
-		f)
+	return addStringFlag([]string{"c", "config"}, "", f)
 }
 
 func addFormatFlag(f *flag.FlagSet) *string {
-	return addStringFlag(
-		[]string{"f", "format"},
-		"yaml",
-		f)
+	return addStringFlag([]string{"f", "format"}, "yaml", f)
+}
+
+func addLimitFlag(f *flag.FlagSet) *string {
+	return addStringFlag([]string{"l", "limit"}, "", f)
 }
 
 func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
@@ -79,22 +74,20 @@ func basicUsage() {
 ` + bold + `reaction example-conf` + reset + `
   # print a configuration file example
 
-` + bold + `reaction show` + reset + ` [.STREAM[.FILTER]]
+` + bold + `reaction show` + reset + `
   # show which actions are still to be run
   # (e.g know what is currenly banned)
 
-  # optional argument: limit to STREAM and FILTER
-
   # options:
     -f/--format yaml|json               # (default: yaml)
+    -l/--limit .STREAM[.FILTER]         # limit to stream and filter
     -s/--socket SOCKET                  # path to the client-daemon communication socket
 
-` + bold + `reaction flush` + reset + ` TARGET [.STREAM[.FILTER]]
+` + bold + `reaction flush` + reset + ` TARGET
   # run currently pending actions for the specified TARGET
 
-  # optional argument: limit to STREAM and FILTER
-
   # options:
+    -l/--limit .STREAM[.FILTER]         # limit to stream and filter
     -s/--socket SOCKET                  # path to the client-daemon communication socket
 
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE          # test REGEX against LINE
@@ -137,7 +130,8 @@ func Main() {
 	case "show":
 		SocketPath = addSocketFlag(f)
 		queryFormat := addFormatFlag(f)
-		subCommandParse(f, 1)
+		limit := addLimitFlag(f)
+		subCommandParse(f, 0)
 		// if *queryFormat != "yaml" && *queryFormat != "json" {
 		// 	fmt.Println("only `yaml` and `json` formats are supported.")
 		// 	f.PrintDefaults()
@@ -147,22 +141,24 @@ func Main() {
 			fmt.Println("for now, only `yaml` format is supported.")
 			os.Exit(1)
 		}
-		if f.Arg(0) != "" {
-			fmt.Println("for now, .STREAM.FILTER is not supported")
+		if *limit != "" {
+			fmt.Println("for now, -l/--limit is not supported")
 			os.Exit(1)
 		}
 		// f.Arg(0) is "" if there is no remaining argument
-		ClientQuery(f.Arg(0))
+		ClientQuery(*limit)
 
 	case "flush":
 		SocketPath = addSocketFlag(f)
-		subCommandParse(f, 2)
+		limit := addLimitFlag(f)
+		subCommandParse(f, 1)
 		if f.Arg(0) == "" {
-			fmt.Println("subcommand flush takes at least one TARGET argument")
+			fmt.Println("subcommand flush takes one TARGET argument")
+			basicUsage()
 			os.Exit(1)
 		}
-		if f.Arg(1) != "" {
-			fmt.Println("for now, the .stream[.filter] argument is not supported")
+		if *limit != "" {
+			fmt.Println("for now, -l/--limit is not supported")
 			os.Exit(1)
 		}
 		ClientFlush(f.Arg(0), f.Arg(1))
