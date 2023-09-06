@@ -1,10 +1,7 @@
 package app
 
 import (
-	"encoding/gob"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"regexp"
@@ -179,107 +176,6 @@ func (c *Conf) setup() {
 					filter.longuestActionDuration = &action.afterDuration
 				}
 			}
-		}
-	}
-}
-
-var DBname = "./reaction.db"
-var DBnewName = "./reaction.new.db"
-
-func (c *Conf) updateFromDB() *gob.Encoder {
-	file, err := os.Open(DBname)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			log.Printf("WARN  No DB found at %s. It's ok if this is the first time reaction is running.\n", DBname)
-
-			file, err := os.Create(DBname)
-			if err != nil {
-				log.Fatalln("FATAL Failed to create DB:", err)
-			}
-			return gob.NewEncoder(file)
-		}
-		log.Fatalln("FATAL Failed to open DB:", err)
-	}
-	dec := gob.NewDecoder(file)
-
-	newfile, err := os.Create(DBnewName)
-	if err != nil {
-		log.Fatalln("FATAL Failed to create new DB:", err)
-	}
-	enc := gob.NewEncoder(newfile)
-
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatalln("FATAL Failed to close old DB:", err)
-		}
-
-		// It should be ok to rename an open file
-		err = os.Rename(DBnewName, DBname)
-		if err != nil {
-			log.Fatalln("FATAL Failed to replace old DB with new one:", err)
-		}
-	}()
-
-	// This extra code is made to warn only one time for each non-existant filter
-	type SF struct{ s, f string }
-	discardedEntries := make(map[SF]bool)
-	malformedEntries := 0
-	defer func() {
-		for sf, t := range discardedEntries {
-			if t {
-				log.Printf("WARN  info discarded from the DB: stream/filter not found: %s.%s\n", sf.s, sf.f)
-			}
-		}
-		if malformedEntries > 0 {
-			log.Printf("WARN  %v malformed entries discarded from the DB\n", malformedEntries)
-		}
-	}()
-
-	encodeOrFatal := func(entry LogEntry) {
-		err = enc.Encode(entry)
-		if err != nil {
-			log.Fatalln("FATAL Failed to write to new DB:", err)
-		}
-	}
-
-	now := time.Now()
-	for {
-		var entry LogEntry
-		var filter *Filter
-
-		// decode entry
-		err = dec.Decode(&entry)
-		if err != nil {
-			if err == io.EOF {
-				return enc
-			}
-			malformedEntries++
-			continue
-		}
-
-		// retrieve related filter
-		if stream := c.Streams[entry.Stream]; stream != nil {
-			filter = stream.Filters[entry.Filter]
-		}
-		if filter == nil {
-			discardedEntries[SF{entry.Stream, entry.Filter}] = true
-			continue
-		}
-
-		// store matches
-		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
-			filter.matches[entry.Pattern] = append(filter.matches[entry.Pattern], entry.T)
-
-			encodeOrFatal(entry)
-		}
-
-		// replay executions
-		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
-			delete(filter.matches, entry.Pattern)
-			filter.execActions(entry.Pattern, now.Sub(entry.T))
-
-			encodeOrFatal(entry)
 		}
 	}
 }
