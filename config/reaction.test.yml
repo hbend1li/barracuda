@@ -2,19 +2,15 @@
 patterns:
   num:
     regex: '[0-9]+'
-  ip:
-    regex: '(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})'
-    ignore:
-      - 1.0.0.1
 
 streams:
-  tailDown1:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo found $(($i % 100)); done" ]
+  tailDown:
+    cmd: [ "sh", "-c", "sleep 2; echo found 1; echo found 2; sleep 1; echo found 1; sleep 2" ]
     filters:
       findIP:
         regex:
           - '^found <num>$'
-        retry: 10
+        retry: 2
         retry-period: 1m
         actions:
           damn:
@@ -22,49 +18,4 @@ streams:
           undamn:
             cmd: [ "echo", "undamn", "<num>" ]
             after: 1m
-            onexit: false
-  tailDown2:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo prout $(($i % 100)); done" ]
-    filters:
-      findIP:
-        regex:
-          - '^prout <num>$'
-        retry: 10
-        retry-period: 1m
-        actions:
-          damn:
-            cmd: [ "echo", "<num>" ]
-          undamn:
-            cmd: [ "echo", "undamn", "<num>" ]
-            after: 1m
-            onexit: false
-  tailDown3:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo nanana $(($i % 100)); done" ]
-    filters:
-      findIP:
-        regex:
-          - '^nanana <num>$'
-        retry: 4
-        retry-period: 2m
-        actions:
-          damn:
-            cmd: [ "true" ]
-          undamn:
-            cmd: [ "true" ]
-            after: 1m
-            onexit: false
-  tailDown4:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo nanana $(($i % 100)); done" ]
-    filters:
-      findIP:
-        regex:
-          - '^nomatch <num>$'
-        retry: 5
-        retry-period: 2m
-        actions:
-          damn:
-            cmd: [ "echo", "<num>" ]
-          undamn:
-            cmd: [ "echo", "undamn", "<num>" ]
-            after: 1m
-            onexit: false
+            onexit: true
