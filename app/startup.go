@@ -102,6 +102,10 @@ func (c *Conf) setup() {
 		stream := c.Streams[streamName]
 		stream.name = streamName
 
+		if strings.Contains(stream.name, ".") {
+			log.Fatalln("FATAL Bad configuration: character '.' is not allowed in stream names", stream.name)
+		}
+
 		if len(stream.Filters) == 0 {
 			log.Fatalln("FATAL Bad configuration: no filters configured in", stream.name)
 		}
@@ -112,6 +116,9 @@ func (c *Conf) setup() {
 			filter.name = filterName
 			filter.matches = make(map[string][]time.Time)
 
+			if strings.Contains(filter.name, ".") {
+				log.Fatalln("FATAL Bad configuration: character '.' is not allowed in filter names", filter.name)
+			}
 			// Parse Duration
 			if filter.RetryPeriod == "" {
 				if filter.Retry > 1 {
@@ -162,6 +169,9 @@ func (c *Conf) setup() {
 				action.filter = filter
 				action.name = actionName
 
+				if strings.Contains(action.name, ".") {
+					log.Fatalln("FATAL Bad configuration: character '.' is not allowed in action names", action.name)
+				}
 				// Parse Duration
 				if action.After != "" {
 					afterDuration, err := time.ParseDuration(action.After)
