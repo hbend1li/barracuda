@@ -1,3 +1,4 @@
-/reaction.db
-/result
 /reaction
+/reaction*.db
+/reaction*.sock
+/result

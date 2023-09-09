@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -73,6 +74,7 @@ func (a *ActionStore) Flush(pattern string) int {
 		}
 	}
 	delete(a.store, pattern)
+	flushes<-LogEntry{time.Now(), pattern, "", "", false}
 	return cpt
 }
 
