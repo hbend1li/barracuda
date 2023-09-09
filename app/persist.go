@@ -47,7 +47,6 @@ func createDB(path string) *WriteDB {
 
 func (c *Conf) DatabaseManager() {
 	logDB, flushDB := c.RotateDB(true)
-	log.Print("DEBUG startup finished, managing logs!")
 	c.manageLogs(logDB, flushDB)
 }
 
@@ -120,7 +119,6 @@ func (c *Conf) RotateDB(startup bool) (*WriteDB, *WriteDB) {
 }
 
 func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.Encoder, startup bool) {
-	log.Println("DEBUG rotating db")
 	// This extra code is made to warn only one time for each non-existant filter
 	type SF struct{ s, f string }
 	discardedEntries := make(map[SF]int)
@@ -167,10 +165,8 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 
 		// store
-		log.Printf("DEBUG got flush: %v", entry.Pattern)
 		flushes[PSF{entry.Pattern, entry.Stream, entry.Filter}] = entry.T
 	}
-	log.Printf("DEBUG flushes: %v", flushes)
 
 	now := time.Now()
 	for {
@@ -201,14 +197,12 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 			entryTime := entry.T.Unix()
 
 			if lastLocalFlush > entryTime || lastGlobalFlush > entryTime {
-				log.Printf("DEBUG got %v (exec:%v) but it has been flushed\n", entry.Pattern, entry.Exec)
 				continue
 			}
 		}
 
 		// store matches
 		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
-			log.Printf("DEBUG got match: %v\n", entry.Pattern)
 			if startup {
 				filter.matches[entry.Pattern] = append(filter.matches[entry.Pattern], entry.T)
 			}
@@ -218,7 +212,6 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 
 		// replay executions
 		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
-			log.Printf("DEBUG got exec: %v\n", entry.Pattern)
 			if startup {
 				delete(filter.matches, entry.Pattern)
 				filter.execActions(entry.Pattern, now.Sub(entry.T))
