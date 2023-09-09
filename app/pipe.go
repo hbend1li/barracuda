@@ -74,7 +74,7 @@ func (a *ActionStore) Flush(pattern string) int {
 		}
 	}
 	delete(a.store, pattern)
-	flushes<-LogEntry{time.Now(), pattern, "", "", false}
+	flushesC <- LogEntry{time.Now(), pattern, "", "", false}
 	return cpt
 }
 
@@ -136,7 +136,7 @@ func createOpenSocket() net.Listener {
 }
 
 // Handle connections
-func ServeSocket() {
+func SocketManager() {
 	ln := createOpenSocket()
 	defer ln.Close()
 	for {

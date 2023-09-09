@@ -11,66 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Conf struct {
-	Patterns map[string]*Pattern `yaml:"patterns"`
-	Streams  map[string]*Stream  `yaml:"streams"`
-}
-
-type Pattern struct {
-	Regex  string   `yaml:"regex"`
-	Ignore []string `yaml:"ignore"`
-
-	name           string `yaml:"-"`
-	nameWithBraces string `yaml:"-"`
-}
-
-// Stream, Filter & Action structures must never be copied.
-// They're always referenced through pointers
-
-type Stream struct {
-	name string `yaml:"-"`
-
-	Cmd     []string           `yaml:"cmd"`
-	Filters map[string]*Filter `yaml:"filters"`
-}
-
-type Filter struct {
-	stream *Stream `yaml:"-"`
-	name   string  `yaml:"-"`
-
-	Regex         []string        `yaml:"regex"`
-	compiledRegex []regexp.Regexp `yaml:"-"`
-	pattern       *Pattern        `yaml:"-"`
-
-	Retry         int           `yaml:"retry"`
-	RetryPeriod   string        `yaml:"retry-period"`
-	retryDuration time.Duration `yaml:"-"`
-
-	Actions                map[string]*Action `yaml:"actions"`
-	longuestActionDuration *time.Duration
-
-	matches map[string][]time.Time `yaml:"-"`
-}
-
-type Action struct {
-	filter *Filter `yaml:"-"`
-	name   string  `yaml:"-"`
-
-	Cmd []string `yaml:"cmd"`
-
-	After         string        `yaml:"after"`
-	afterDuration time.Duration `yaml:"-"`
-
-	OnExit bool `yaml:"onexit"`
-}
-
-type LogEntry struct {
-	T              time.Time
-	Pattern        string
-	Stream, Filter string
-	Exec           bool
-}
-
 func (c *Conf) setup() {
 
 	for patternName := range c.Patterns {
@@ -114,7 +54,6 @@ func (c *Conf) setup() {
 			filter := stream.Filters[filterName]
 			filter.stream = stream
 			filter.name = filterName
-			filter.matches = make(map[string][]time.Time)
 
 			if strings.Contains(filter.name, ".") {
 				log.Fatalln("FATAL Bad configuration: character '.' is not allowed in filter names", filter.name)

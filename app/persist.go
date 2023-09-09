@@ -15,16 +15,6 @@ const (
 	flushDBName  = "./reaction-flushes.db"
 )
 
-type ReadDB struct {
-	file *os.File
-	dec  *gob.Decoder
-}
-
-type WriteDB struct {
-	file *os.File
-	enc  *gob.Encoder
-}
-
 func openDB(path string) (bool, *ReadDB) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -54,9 +44,9 @@ func (c *Conf) manageLogs(logDB *WriteDB, flushDB *WriteDB) {
 	var cpt int
 	for {
 		select {
-		case entry := <-flushes:
+		case entry := <-flushesC:
 			flushDB.enc.Encode(entry)
-		case entry := <-logs:
+		case entry := <-logsC:
 			logDB.enc.Encode(entry)
 			cpt++
 			// let's say 100 000 entries ~ 10 MB
@@ -120,7 +110,6 @@ func (c *Conf) RotateDB(startup bool) (*WriteDB, *WriteDB) {
 
 func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.Encoder, startup bool) {
 	// This extra code is made to warn only one time for each non-existant filter
-	type SF struct{ s, f string }
 	discardedEntries := make(map[SF]int)
 	malformedEntries := 0
 	defer func() {
@@ -137,8 +126,6 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 	var err error
 	var entry LogEntry
 	var filter *Filter
-
-	type PSF struct{ p, s, f string }
 
 	// pattern, stream, fitler → last flush
 	flushes := make(map[PSF]time.Time)
@@ -204,7 +191,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// store matches
 		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
 			if startup {
-				filter.matches[entry.Pattern] = append(filter.matches[entry.Pattern], entry.T)
+				startupMatchesC <- PFT{entry.Pattern, filter, entry.T}
 			}
 
 			encodeOrFatal(logEnc, entry)
@@ -213,12 +200,15 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// replay executions
 		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
 			if startup {
-				delete(filter.matches, entry.Pattern)
+				cleanMatchesC <- PF{entry.Pattern, filter}
 				filter.execActions(entry.Pattern, now.Sub(entry.T))
 			}
 
 			encodeOrFatal(logEnc, entry)
 		}
+	}
+	if startup {
+		close(startupMatchesC)
 	}
 }
 

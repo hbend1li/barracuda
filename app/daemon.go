@@ -105,39 +105,74 @@ func (a *Action) exec(match string, advance time.Duration) {
 	}
 }
 
-func (f *Filter) cleanOldMatches(match string) {
-	now := time.Now()
-	newMatches := make([]time.Time, 0, len(f.matches[match]))
-	for _, old := range f.matches[match] {
-		if old.Add(f.retryDuration).After(now) {
-			newMatches = append(newMatches, old)
+func MatchesManager() {
+	matches := make(MatchesMap)
+	var pf PF
+	var pft PFT
+	end := false
+
+	for !end {
+		select {
+		case pf = <-cleanMatchesC:
+			delete(matches[pf.f], pf.p)
+		case pft, ok := <-startupMatchesC:
+			if !ok {
+				end = true
+			} else {
+				_ = matchesManagerHandleMatch(matches, pft)
+			}
 		}
 	}
-	f.matches[match] = newMatches
-}
 
-func (f *Filter) handle(line *string) {
-	if match := f.match(line); match != "" {
+	for {
+		select {
+		case pf = <-cleanMatchesC:
+			delete(matches[pf.f], pf.p)
+		case pft = <-matchesC:
 
-		entry := LogEntry{time.Now(), match, f.stream.name, f.name, false}
+			entry := LogEntry{pft.t, pft.p, pft.f.stream.name, pft.f.name, false}
 
-		if f.Retry > 1 {
-			f.cleanOldMatches(match)
+			entry.Exec = matchesManagerHandleMatch(matches, pft)
 
-			f.matches[match] = append(f.matches[match], time.Now())
+			logsC <- entry
 		}
-
-		if f.Retry <= 1 || len(f.matches[match]) >= f.Retry {
-			entry.Exec = true
-			delete(f.matches, match)
-			f.execActions(match, time.Duration(0))
-		}
-
-		logs <- entry
 	}
 }
 
-func (s *Stream) handle(endedSignal chan *Stream) {
+func matchesManagerHandleMatch(matches MatchesMap, pft PFT) bool {
+	var filter *Filter
+	var match string
+	var now time.Time
+	filter = pft.f
+	match = pft.p
+	now = pft.t
+
+	if filter.Retry > 1 {
+		// make sure map exists
+		if matches[filter] == nil {
+			matches[filter] = make(map[string][]time.Time)
+		}
+		// clean old matches
+		newMatches := make([]time.Time, 0, len(matches[filter][match]))
+		for _, old := range matches[filter][match] {
+			if old.Add(filter.retryDuration).After(now) {
+				newMatches = append(newMatches, old)
+			}
+		}
+		// add new match
+		newMatches = append(newMatches, now)
+		matches[filter][match] = newMatches
+	}
+
+	if filter.Retry <= 1 || len(matches[filter][match]) >= filter.Retry {
+		delete(matches[filter], match)
+		filter.execActions(match, time.Duration(0))
+		return true
+	}
+	return false
+}
+
+func StreamManager(s *Stream, endedSignal chan *Stream) {
 	log.Printf("INFO  %s: start %s\n", s.name, s.Cmd)
 
 	lines := cmdStdout(s.Cmd)
@@ -149,7 +184,9 @@ func (s *Stream) handle(endedSignal chan *Stream) {
 				return
 			}
 			for _, filter := range s.Filters {
-				filter.handle(line)
+				if match := filter.match(line); match != "" {
+					matchesC <- PFT{match, filter, time.Now()}
+				}
 			}
 		case _, ok := <-stopStreams:
 			if !ok {
@@ -164,17 +201,34 @@ var stopStreams chan bool
 var actionStore ActionStore
 var wgActions sync.WaitGroup
 
-var logs chan LogEntry
-var flushes chan LogEntry
+// MatchesManager → DatabaseManager
+var logsC chan LogEntry
+// SocketManager → DatabaseManager
+var flushesC chan LogEntry
+
+// DatabaseManager → MatchesManager
+var startupMatchesC chan PFT
+// StreamManager → MatchesManager
+var matchesC chan PFT
+// StreamManager, DatabaseManager → MatchesManager
+var cleanMatchesC chan PF
+// MatchesManager → ExecsManager
+var execsC chan PA
 
 func Daemon(confFilename string) {
 	actionStore.store = make(ActionMap)
 
 	conf := parseConf(confFilename)
 
-	logs = make(chan LogEntry)
-	flushes = make(chan LogEntry)
+	logsC = make(chan LogEntry)
+	flushesC = make(chan LogEntry)
+	matchesC = make(chan PFT)
+	startupMatchesC = make(chan PFT)
+	cleanMatchesC = make(chan PF)
+	execsC = make(chan PA)
+
 	go DatabaseManager(conf)
+	go MatchesManager()
 
 	// Ready to start
 
@@ -187,10 +241,10 @@ func Daemon(confFilename string) {
 	nbStreamsInExecution := len(conf.Streams)
 
 	for _, stream := range conf.Streams {
-		go stream.handle(endSignals)
+		go StreamManager(stream, endSignals)
 	}
 
-	go ServeSocket()
+	go SocketManager()
 
 	for {
 		select {
@@ -208,12 +262,12 @@ func Daemon(confFilename string) {
 }
 
 func quit() {
+	log.Println("INFO  Quitting...")
 	// stop all streams
 	close(stopStreams)
 	// stop all actions
 	actionStore.Quit()
 	// wait for them to complete
-	log.Println("INFO  Waiting for actions to complete")
 	wgActions.Wait()
 	// delete pipe
 	err := os.Remove(*SocketPath)
