@@ -116,50 +116,31 @@ func (f *Filter) cleanOldMatches(match string) {
 	f.matches[match] = newMatches
 }
 
-func (f *Filter) handle() chan *string {
-	lines := make(chan *string)
+func (f *Filter) handle(line *string) {
+	if match := f.match(line); match != "" {
 
-	go func() {
-		for line := range lines {
-			if match := f.match(line); match != "" {
+		entry := LogEntry{time.Now(), match, f.stream.name, f.name, false}
 
-				entry := LogEntry{time.Now(), match, f.stream.name, f.name, false}
+		if f.Retry > 1 {
+			f.cleanOldMatches(match)
 
-				if f.Retry > 1 {
-					f.cleanOldMatches(match)
-
-					f.matches[match] = append(f.matches[match], time.Now())
-				}
-
-				if f.Retry <= 1 || len(f.matches[match]) >= f.Retry {
-					entry.Exec = true
-					delete(f.matches, match)
-					f.execActions(match, time.Duration(0))
-				}
-
-				logs <- entry
-			}
+			f.matches[match] = append(f.matches[match], time.Now())
 		}
-	}()
 
-	return lines
+		if f.Retry <= 1 || len(f.matches[match]) >= f.Retry {
+			entry.Exec = true
+			delete(f.matches, match)
+			f.execActions(match, time.Duration(0))
+		}
+
+		logs <- entry
+	}
 }
 
 func (s *Stream) handle(endedSignal chan *Stream) {
 	log.Printf("INFO  %s: start %s\n", s.name, s.Cmd)
 
 	lines := cmdStdout(s.Cmd)
-
-	var filterInputs = make([]chan *string, 0, len(s.Filters))
-	for _, filter := range s.Filters {
-		filterInputs = append(filterInputs, filter.handle())
-	}
-	defer func() {
-		for _, filterInput := range filterInputs {
-			close(filterInput)
-		}
-	}()
-
 	for {
 		select {
 		case line, ok := <-lines:
@@ -167,8 +148,8 @@ func (s *Stream) handle(endedSignal chan *Stream) {
 				endedSignal <- s
 				return
 			}
-			for _, filterInput := range filterInputs {
-				filterInput <- line
+			for _, filter := range s.Filters {
+				filter.handle(line)
 			}
 		case _, ok := <-stopStreams:
 			if !ok {
