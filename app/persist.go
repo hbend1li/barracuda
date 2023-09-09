@@ -45,7 +45,7 @@ func createDB(path string) *WriteDB {
 	return &WriteDB{file, gob.NewEncoder(file)}
 }
 
-func (c *Conf) DatabaseManager() {
+func DatabaseManager(c *Conf) {
 	logDB, flushDB := c.RotateDB(true)
 	c.manageLogs(logDB, flushDB)
 }

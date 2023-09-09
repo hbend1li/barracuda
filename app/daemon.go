@@ -174,7 +174,7 @@ func Daemon(confFilename string) {
 
 	logs = make(chan LogEntry)
 	flushes = make(chan LogEntry)
-	go conf.DatabaseManager()
+	go DatabaseManager(conf)
 
 	// Ready to start
 
