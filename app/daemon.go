@@ -73,16 +73,6 @@ func (f *Filter) execActions(match string, advance time.Duration) {
 	}
 }
 
-func sleep(d time.Duration) chan bool {
-	c := make(chan bool)
-	go func() {
-		time.Sleep(d)
-		c <- true
-		close(c)
-	}()
-	return c
-}
-
 func (a *Action) exec(match string, advance time.Duration) {
 	defer wgActions.Done()
 
@@ -90,7 +80,7 @@ func (a *Action) exec(match string, advance time.Duration) {
 	if a.afterDuration != 0 && a.afterDuration > advance {
 		stopAction := actionStore.Register(a, match)
 		select {
-		case <-sleep(a.afterDuration - advance):
+		case <-time.After(a.afterDuration - advance):
 			// Let's not wait for the lock
 			go actionStore.Unregister(a, match, stopAction)
 		case doExec := <-stopAction:
