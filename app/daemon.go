@@ -89,11 +89,6 @@ func (a *Action) exec(match string) {
 	}
 }
 
-func quasiBefore(then, now time.Time) bool {
-	// We won't complain if it's executed less than 1sec earlier
-	return then.Unix() <= now.Add(1*time.Second).Unix()
-}
-
 func ActionsManager() {
 	actions := make(ActionsMap)
 	pendingActionsC := make(chan PAT)
@@ -112,7 +107,7 @@ func ActionsManager() {
 			then = pat.t
 			now = time.Now()
 			// check
-			if quasiBefore(then, now) {
+			if then.Compare(now) <= 0 {
 				wgActions.Add(1)
 				go action.exec(match)
 			} else {
@@ -122,27 +117,17 @@ func ActionsManager() {
 				}
 				// append() to nil is valid go
 				actions[action][match] = append(actions[action][match], then)
-				go func(pat PAT) {
-					log.Printf("DEBUG               then: %v, now: %v, then.Sub(now): %v", then.String(), now.String(), then.Sub(now).String())
-					time.Sleep(then.Sub(now))
+				go func(pat PAT, now time.Time) {
+					time.Sleep(pat.t.Sub(now))
 					pendingActionsC <- pat
-				}(pat)
+				}(pat, now)
 			}
-		// FIXME convert to pendingActionsC to chan PA
-		// and forget about time checking
 		case pat = <-pendingActionsC:
 			match = pat.p
 			action = pat.a
-			then = pat.t
-			now = time.Now()
-			if quasiBefore(then, now) {
-				actions[action][match] = actions[action][match][1:]
-				wgActions.Add(1)
-				go action.exec(match)
-			} else {
-				// This should not happen
-				log.Fatalf("ERROR pendingActionsC then: %v << now %v\n", pat.t.String(), now)
-			}
+			actions[action][match] = actions[action][match][1:]
+			wgActions.Add(1)
+			go action.exec(match)
 		case _, _ = <-stopActions:
 			for action := range actions {
 				if action.OnExit {
