@@ -63,6 +63,7 @@ func (c *Conf) manageLogs(logDB *WriteDB, flushDB *WriteDB) {
 }
 
 func (c *Conf) RotateDB(startup bool) (*WriteDB, *WriteDB) {
+	defer close(startupMatchesC)
 	var (
 		doesntExist  bool
 		err          error
@@ -191,6 +192,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// store matches
 		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
 			if startup {
+				log.Println("DEBUG db send match")
 				startupMatchesC <- PFT{entry.Pattern, filter, entry.T}
 			}
 
@@ -200,15 +202,13 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// replay executions
 		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
 			if startup {
+				log.Println("DEBUG db send match")
 				cleanMatchesC <- PF{entry.Pattern, filter}
-				filter.execActions(entry.Pattern, now.Sub(entry.T))
+				filter.sendActions(entry.Pattern, entry.T)
 			}
 
 			encodeOrFatal(logEnc, entry)
 		}
-	}
-	if startup {
-		close(startupMatchesC)
 	}
 }
 

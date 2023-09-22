@@ -5,17 +5,17 @@ patterns:
 
 streams:
   tailDown:
-    cmd: [ "sh", "-c", "sleep 2; echo found 1; echo found 2; sleep 2" ]
+    cmd: [ "sh", "-c", "sleep 0.5; echo found 1; sleep 1; echo found 1; sleep 10" ]
     filters:
       findIP:
         regex:
           - '^found <num>$'
         retry: 2
-        retry-period: 2m
+        retry-period: 1m
         actions:
           damn:
             cmd: [ "echo", "<num>" ]
           undamn:
             cmd: [ "echo", "undamn", "<num>" ]
-            after: 1m
+            after: 5s
             onexit: true

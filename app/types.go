@@ -75,7 +75,11 @@ type WriteDB struct {
 	enc  *gob.Encoder
 }
 
-type MatchesMap map[*Filter]map[string][]time.Time
+type PatternTimes map[string][]time.Time
+
+type MatchesMap map[*Filter]PatternTimes
+
+type ActionsMap map[*Action]PatternTimes
 
 // Helper structs made to carry information across channels
 type SF struct{ s, f string }
@@ -92,4 +96,9 @@ type PFT struct {
 type PA struct {
 	p string
 	a *Action
+}
+type PAT struct {
+	p string
+	a *Action
+	t time.Time
 }
