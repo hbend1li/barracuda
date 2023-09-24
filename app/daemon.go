@@ -186,14 +186,19 @@ func matchesManagerHandleMatch(pft PFT) bool {
 		if matches[pf] == nil {
 			matches[pf] = make(map[time.Time]struct{})
 		}
-		// clean old matches
-		for old := range matches[pf] {
-			if !old.Add(filter.retryDuration).After(then) {
-				delete(matches[pf], old)
-			}
-		}
 		// add new match
 		matches[pf][then] = struct{}{}
+		// remove match when expired
+		go func(pf PF, then time.Time) {
+			time.Sleep(filter.retryDuration)
+			matchesLock.Lock()
+			if matches[pf] != nil {
+				// FIXME replace this and all similar occurences
+				// by clear() when switching to go 1.21
+				delete(matches[pf], then)
+			}
+			matchesLock.Unlock()
+		}(pf, then)
 	}
 
 	if filter.Retry <= 1 || len(matches[pf]) >= filter.Retry {
