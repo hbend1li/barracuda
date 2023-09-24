@@ -90,7 +90,6 @@ func (a *Action) exec(match string) {
 }
 
 func ActionsManager() {
-	actions := make(ActionsMap)
 	pendingActionsC := make(chan PAT)
 	var (
 		pat    PAT
@@ -111,12 +110,14 @@ func ActionsManager() {
 				wgActions.Add(1)
 				go action.exec(match)
 			} else {
+				actionsLock.Lock()
 				// make sure map exists
 				if actions[action] == nil {
 					actions[action] = make(PatternTimes)
 				}
 				// append() to nil is valid go
 				actions[action][match] = append(actions[action][match], then)
+				actionsLock.Unlock()
 				go func(pat PAT, now time.Time) {
 					time.Sleep(pat.t.Sub(now))
 					pendingActionsC <- pat
@@ -125,10 +126,13 @@ func ActionsManager() {
 		case pat = <-pendingActionsC:
 			match = pat.p
 			action = pat.a
+			actionsLock.Lock()
 			actions[action][match] = actions[action][match][1:]
+			actionsLock.Unlock()
 			wgActions.Add(1)
 			go action.exec(match)
 		case _, _ = <-stopActions:
+			actionsLock.Lock()
 			for action := range actions {
 				if action.OnExit {
 					for match := range actions[action] {
@@ -137,6 +141,7 @@ func ActionsManager() {
 					}
 				}
 			}
+			actionsLock.Unlock()
 			wgActions.Done()
 			return
 		}
@@ -144,7 +149,6 @@ func ActionsManager() {
 }
 
 func MatchesManager() {
-	matches := make(MatchesMap)
 	var pf PF
 	var pft PFT
 	end := false
@@ -157,7 +161,7 @@ func MatchesManager() {
 			if !ok {
 				end = true
 			} else {
-				_ = matchesManagerHandleMatch(matches, pft)
+				_ = matchesManagerHandleMatch(pft)
 			}
 		}
 	}
@@ -165,19 +169,23 @@ func MatchesManager() {
 	for {
 		select {
 		case pf = <-cleanMatchesC:
+			matchesLock.Lock()
 			delete(matches[pf.f], pf.p)
+			matchesLock.Unlock()
 		case pft = <-matchesC:
 
 			entry := LogEntry{pft.t, pft.p, pft.f.stream.name, pft.f.name, false}
 
-			entry.Exec = matchesManagerHandleMatch(matches, pft)
+			matchesLock.Lock()
+			entry.Exec = matchesManagerHandleMatch(pft)
+			matchesLock.Unlock()
 
 			logsC <- entry
 		}
 	}
 }
 
-func matchesManagerHandleMatch(matches MatchesMap, pft PFT) bool {
+func matchesManagerHandleMatch(pft PFT) bool {
 	filter, match, then := pft.f, pft.p, pft.t
 
 	if filter.Retry > 1 {
@@ -229,9 +237,13 @@ func StreamManager(s *Stream, endedSignal chan *Stream) {
 
 }
 
+var actions ActionsMap
+var matches MatchesMap
+var actionsLock sync.Mutex
+var matchesLock sync.Mutex
+
 var stopStreams chan bool
 var stopActions chan bool
-var actionStore ActionStore
 var wgActions sync.WaitGroup
 var wgStreams sync.WaitGroup
 
@@ -254,8 +266,6 @@ var cleanMatchesC chan PF
 var actionsC chan PAT
 
 func Daemon(confFilename string) {
-	actionStore.store = make(ActionMap)
-
 	conf := parseConf(confFilename)
 
 	logsC = make(chan LogEntry)
@@ -266,6 +276,8 @@ func Daemon(confFilename string) {
 	actionsC = make(chan PAT)
 	stopActions = make(chan bool)
 	stopStreams = make(chan bool)
+	actions = make(ActionsMap)
+	matches = make(MatchesMap)
 
 	go DatabaseManager(conf)
 	go MatchesManager()
@@ -311,7 +323,6 @@ func quit() {
 	// send stop to ActionsManager
 	close(stopActions)
 	// stop all actions
-	actionStore.Quit()
 	log.Println("INFO  Waiting for Actions to finish...")
 	wgActions.Wait()
 	// delete pipe

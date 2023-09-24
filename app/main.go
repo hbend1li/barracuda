@@ -146,7 +146,7 @@ func Main() {
 			os.Exit(1)
 		}
 		// f.Arg(0) is "" if there is no remaining argument
-		ClientQuery(*limit)
+		ClientShow(*limit)
 
 	case "flush":
 		SocketPath = addSocketFlag(f)

@@ -8,10 +8,12 @@ import (
 	"net"
 	"os"
 	"regexp"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
-	Query = 0
+	Show  = 0
 	Flush = 1
 )
 
@@ -21,9 +23,9 @@ type Request struct {
 }
 
 type Response struct {
-	Err     error
-	Actions ReadableMap
-	Number  int
+	Err          error
+	ClientStatus ClientStatus
+	Number       int
 }
 
 func SendAndRetrieve(data Request) Response {
@@ -31,6 +33,7 @@ func SendAndRetrieve(data Request) Response {
 	if err != nil {
 		log.Fatalln("Error opening connection top daemon:", err)
 	}
+	defer conn.Close()
 
 	err = gob.NewEncoder(conn).Encode(data)
 	if err != nil {
@@ -45,19 +48,60 @@ func SendAndRetrieve(data Request) Response {
 	return response
 }
 
+type PatternStatus struct {
+	Matches int                 `yaml:"matches_since_last_trigger"`
+	Actions map[string][]string `yaml:"pending_actions"`
+}
+type MapPatternStatus map[string]*PatternStatus
+type ClientStatus map[string]map[string]MapPatternStatus
+
+// This block is made to hide pending_actions when empty
+// and matches_since_last_trigger when zero
+type FullPatternStatus PatternStatus
+type MatchesStatus struct {
+	Matches int `yaml:"matches_since_last_trigger"`
+}
+type ActionsStatus struct {
+	Actions map[string][]string `yaml:"pending_actions"`
+}
+
+func (mps MapPatternStatus) MarshalYAML() (interface{}, error) {
+	ret := make(map[string]interface{})
+	for k, v := range mps {
+		if v.Matches == 0 {
+			if len(v.Actions) != 0 {
+				ret[k] = ActionsStatus{v.Actions}
+			}
+		} else {
+			if len(v.Actions) != 0 {
+				ret[k] = v
+			} else {
+				ret[k] = MatchesStatus{v.Matches}
+			}
+		}
+	}
+	return ret, nil
+}
+
+// end block
+
 func usage(err string) {
 	fmt.Println("Usage: reactionc")
 	fmt.Println("Usage: reactionc flush <PATTERN>")
 	log.Fatalln(err)
 }
 
-func ClientQuery(streamfilter string) {
-	response := SendAndRetrieve(Request{Query, streamfilter})
+func ClientShow(streamfilter string) {
+	response := SendAndRetrieve(Request{Show, streamfilter})
 	if response.Err != nil {
 		log.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
-	fmt.Println(response.Actions.ToString())
+	text, err := yaml.Marshal(response.ClientStatus)
+	if err != nil {
+		log.Fatalln("Failed to convert daemon binary response to text format:", err)
+	}
+	fmt.Println(string(text))
 	os.Exit(0)
 }
 
