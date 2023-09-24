@@ -101,7 +101,7 @@ func (c *Conf) RotateDB(startup bool) (*WriteDB, *WriteDB) {
 	}
 
 	err = os.Remove(flushDBName)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Fatalln("FATAL Failed to delete old DB:", err)
 	}
 
