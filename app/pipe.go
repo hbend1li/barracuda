@@ -14,45 +14,37 @@ func genClientStatus() ClientStatus {
 	matchesLock.Lock()
 
 	// Painful data manipulation
-	for filter, filterMatches := range matches {
+	for pf, times := range matches {
+		pattern, filter := pf.p, pf.f
 		if cs[filter.stream.name] == nil {
 			cs[filter.stream.name] = make(map[string]MapPatternStatus)
 		}
 		if cs[filter.stream.name][filter.name] == nil {
 			cs[filter.stream.name][filter.name] = make(MapPatternStatus)
 		}
-		for pattern, patternMatches := range filterMatches {
-			var ps PatternStatus
-			cs[filter.stream.name][filter.name][pattern] = &ps
-
-			ps.Matches = len(patternMatches)
-		}
+		cs[filter.stream.name][filter.name][pattern] = &PatternStatus{len(times), nil}
 	}
 
 	matchesLock.Unlock()
 	actionsLock.Lock()
 
 	// Painful data manipulation
-	for action, pendingActions := range actions {
+	for pat := range actions {
+		pattern, action, then := pat.p, pat.a, pat.t
 		if cs[action.filter.stream.name] == nil {
 			cs[action.filter.stream.name] = make(map[string]MapPatternStatus)
 		}
 		if cs[action.filter.stream.name][action.filter.name] == nil {
 			cs[action.filter.stream.name][action.filter.name] = make(MapPatternStatus)
 		}
-		for pattern, patternPendingActions := range pendingActions {
-			if cs[action.filter.stream.name][action.filter.name][pattern] == nil {
-				var ps PatternStatus
-				cs[action.filter.stream.name][action.filter.name][pattern] = &ps
-			}
-			var ps *PatternStatus
-			ps = cs[action.filter.stream.name][action.filter.name][pattern]
-			ps.Actions = make(map[string][]string)
-
-			for _, t := range patternPendingActions {
-				ps.Actions[action.name] = append(ps.Actions[action.name], t.Format(time.DateTime))
-			}
+		if cs[action.filter.stream.name][action.filter.name][pattern] == nil {
+			cs[action.filter.stream.name][action.filter.name][pattern] = new(PatternStatus)
 		}
+		ps := cs[action.filter.stream.name][action.filter.name][pattern]
+		if ps.Actions == nil {
+			ps.Actions = make(map[string][]string)
+		}
+		ps.Actions[action.name] = append(ps.Actions[action.name], then.Format(time.DateTime))
 	}
 	actionsLock.Unlock()
 	return cs

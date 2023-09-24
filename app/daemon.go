@@ -111,12 +111,7 @@ func ActionsManager() {
 				go action.exec(match)
 			} else {
 				actionsLock.Lock()
-				// make sure map exists
-				if actions[action] == nil {
-					actions[action] = make(PatternTimes)
-				}
-				// append() to nil is valid go
-				actions[action][match] = append(actions[action][match], then)
+				actions[PAT{match, action, then}] = struct{}{}
 				actionsLock.Unlock()
 				go func(pat PAT, now time.Time) {
 					time.Sleep(pat.t.Sub(now))
@@ -124,21 +119,18 @@ func ActionsManager() {
 				}(pat, now)
 			}
 		case pat = <-pendingActionsC:
-			match = pat.p
-			action = pat.a
+			match, action, then = pat.p, pat.a, pat.t
 			actionsLock.Lock()
-			actions[action][match] = actions[action][match][1:]
+			delete(actions, PAT{match, action, then})
 			actionsLock.Unlock()
 			wgActions.Add(1)
 			go action.exec(match)
 		case _, _ = <-stopActions:
 			actionsLock.Lock()
-			for action := range actions {
-				if action.OnExit {
-					for match := range actions[action] {
-						wgActions.Add(1)
-						go action.exec(match)
-					}
+			for pat := range actions {
+				if pat.a.OnExit {
+					wgActions.Add(1)
+					go action.exec(match)
 				}
 			}
 			actionsLock.Unlock()
@@ -156,7 +148,7 @@ func MatchesManager() {
 	for !end {
 		select {
 		case pf = <-cleanMatchesC:
-			delete(matches[pf.f], pf.p)
+			delete(matches, pf)
 		case pft, ok := <-startupMatchesC:
 			if !ok {
 				end = true
@@ -170,7 +162,7 @@ func MatchesManager() {
 		select {
 		case pf = <-cleanMatchesC:
 			matchesLock.Lock()
-			delete(matches[pf.f], pf.p)
+			delete(matches, pf)
 			matchesLock.Unlock()
 		case pft = <-matchesC:
 
@@ -187,26 +179,25 @@ func MatchesManager() {
 
 func matchesManagerHandleMatch(pft PFT) bool {
 	filter, match, then := pft.f, pft.p, pft.t
+	pf := PF{pft.p, pft.f}
 
 	if filter.Retry > 1 {
 		// make sure map exists
-		if matches[filter] == nil {
-			matches[filter] = make(PatternTimes)
+		if matches[pf] == nil {
+			matches[pf] = make(map[time.Time]struct{})
 		}
 		// clean old matches
-		newMatches := make([]time.Time, 0, len(matches[filter][match]))
-		for _, old := range matches[filter][match] {
-			if old.Add(filter.retryDuration).After(then) {
-				newMatches = append(newMatches, old)
+		for old := range matches[pf] {
+			if !old.Add(filter.retryDuration).After(then) {
+				delete(matches[pf], old)
 			}
 		}
 		// add new match
-		newMatches = append(newMatches, then)
-		matches[filter][match] = newMatches
+		matches[pf][then] = struct{}{}
 	}
 
-	if filter.Retry <= 1 || len(matches[filter][match]) >= filter.Retry {
-		delete(matches[filter], match)
+	if filter.Retry <= 1 || len(matches[pf]) >= filter.Retry {
+		delete(matches, pf)
 		filter.sendActions(match, then)
 		return true
 	}
