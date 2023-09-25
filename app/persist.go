@@ -45,7 +45,7 @@ func (c *Conf) manageLogs(logDB *WriteDB, flushDB *WriteDB) {
 	var cpt int
 	for {
 		select {
-		case entry := <-flushesC:
+		case entry := <-flushToDatabaseC:
 			flushDB.enc.Encode(entry)
 		case entry := <-logsC:
 			logDB.enc.Encode(entry)
@@ -201,7 +201,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// replay executions
 		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
 			if startup {
-				cleanMatchesC <- PF{entry.Pattern, filter}
+				flushToMatchesC <- PF{entry.Pattern, filter}
 				filter.sendActions(entry.Pattern, entry.T)
 			}
 
