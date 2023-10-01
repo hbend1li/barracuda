@@ -1,6 +1,7 @@
 ---
 # definitions are just a place to put chunks of conf you want to reuse in another place
-# they're not readed by reaction
+# using YAML anchors `&name` and pointers `*name`
+# definitions are not readed by reaction
 definitions:
   - &iptablesban [ "iptables" "-w" "-A" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
   - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
@@ -44,7 +45,7 @@ streams:
         actions:
           # actions have a user-defined name
           ban:
-            # YAML substitutes *reference by the value at &reference
+            # YAML substitutes *reference by the value anchored at &reference
             cmd: *iptablesban
           unban:
             cmd:  *iptablesunban
@@ -55,4 +56,20 @@ streams:
             # if you want reaction to run those pending commands before exiting, you can set this:
             onexit: true
             # (defaults to false)
-            # here it is not useful because we will flush the chain containing the bans anyway (see ./reaction.service)
+            # here it is not useful because we will flush the chain containing the bans anyway
+            # (see /conf/reaction.service)
+
+# persistence
+# tldr; when an `after` action is set in a filter, such filter acts as a 'jail',
+# which is persisted after reboots.
+#
+# when a filter is triggered, there are 2 flows:
+#
+# if none of its actions have an `after` directive set:
+# no action will be replayed.
+#
+# else (if at least one action has an `after` directive set):
+# if reaction stops while `after` actions are pending:
+# and reaction starts again while those actions would still be pending:
+# reaction executes the past actions (actions without after or with then+after < now)
+# and plans the execution of future actions (actions with then+after > now)
