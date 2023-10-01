@@ -29,8 +29,8 @@ func genClientStatus() ClientStatus {
 	actionsLock.Lock()
 
 	// Painful data manipulation
-	for pat := range actions {
-		pattern, action, then := pat.p, pat.a, pat.t
+	for pa := range actions {
+		pattern, action := pa.p, pa.a
 		if cs[action.filter.stream.name] == nil {
 			cs[action.filter.stream.name] = make(map[string]MapPatternStatus)
 		}
@@ -44,10 +44,37 @@ func genClientStatus() ClientStatus {
 		if ps.Actions == nil {
 			ps.Actions = make(map[string][]string)
 		}
-		ps.Actions[action.name] = append(ps.Actions[action.name], then.Format(time.DateTime))
+		for then := range actions[pa] {
+			ps.Actions[action.name] = append(ps.Actions[action.name], then.Format(time.DateTime))
+		}
 	}
 	actionsLock.Unlock()
 	return cs
+}
+
+func genFlushedMatches(og map[*Filter]int) map[string]map[string]int {
+	ret := make(map[string]map[string]int)
+	for filter, nb := range og {
+		if ret[filter.stream.name] == nil {
+			ret[filter.stream.name] = make(map[string]int)
+		}
+		ret[filter.stream.name][filter.name] = nb
+	}
+	return ret
+}
+
+func genFlushedActions(og map[*Action]int) map[string]map[string]map[string]int {
+	ret := make(map[string]map[string]map[string]int)
+	for action, nb := range og {
+		if ret[action.filter.stream.name] == nil {
+			ret[action.filter.stream.name] = make(map[string]map[string]int)
+		}
+		if ret[action.filter.stream.name][action.filter.name] == nil {
+			ret[action.filter.stream.name][action.filter.name] = make(map[string]int)
+		}
+		ret[action.filter.stream.name][action.filter.name][action.name] = nb
+	}
+	return ret
 }
 
 func createOpenSocket() net.Listener {
@@ -71,7 +98,7 @@ func createOpenSocket() net.Listener {
 }
 
 // Handle connections
-func SocketManager() {
+func SocketManager(streams map[string]*Stream) {
 	ln := createOpenSocket()
 	defer ln.Close()
 	for {
@@ -95,8 +122,15 @@ func SocketManager() {
 			case Show:
 				response.ClientStatus = genClientStatus()
 			case Flush:
-				// FIXME reimplement flush
-				response.Number = 0
+				le := LogEntry{time.Now(), request.Pattern, "", "", false}
+				matches := FlushMatchOrder{request.Pattern, make(chan map[*Filter]int)}
+				actions := FlushActionOrder{request.Pattern, make(chan map[*Action]int)}
+				flushToMatchesC <- matches
+				flushToActionsC <- actions
+				flushToDatabaseC <- le
+
+				response.FlushedMatches = genFlushedMatches(<-matches.ret)
+				response.FlushedActions = genFlushedActions(<-actions.ret)
 			default:
 				log.Println("ERROR Invalid Message from cli: unrecognised Request type")
 				return

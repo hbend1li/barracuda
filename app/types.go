@@ -76,7 +76,7 @@ type WriteDB struct {
 }
 
 type MatchesMap map[PF]map[time.Time]struct{}
-type ActionsMap map[PAT]struct{}
+type ActionsMap map[PA]map[time.Time]struct{}
 
 // Helper structs made to carry information
 type SF struct{ s, f string }
@@ -98,4 +98,13 @@ type PAT struct {
 	p string
 	a *Action
 	t time.Time
+}
+
+type FlushMatchOrder struct {
+	p   string
+	ret chan map[*Filter]int
+}
+type FlushActionOrder struct {
+	p   string
+	ret chan map[*Action]int
 }

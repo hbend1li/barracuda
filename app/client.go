@@ -23,9 +23,10 @@ type Request struct {
 }
 
 type Response struct {
-	Err          error
-	ClientStatus ClientStatus
-	Number       int
+	Err            error
+	ClientStatus   ClientStatus
+	FlushedMatches map[string]map[string]int
+	FlushedActions map[string]map[string]map[string]int
 }
 
 func SendAndRetrieve(data Request) Response {
@@ -111,7 +112,14 @@ func ClientFlush(pattern, streamfilter string) {
 		log.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
-	fmt.Printf("flushed pattern %v times\n", response.Number)
+	text, err := yaml.Marshal(struct {
+		Matches map[string]map[string]int
+		Actions map[string]map[string]map[string]int
+	}{response.FlushedMatches, response.FlushedActions})
+	if err != nil {
+		log.Fatalln("Failed to convert daemon binary response to text format:", err)
+	}
+	fmt.Println(string(text))
 	os.Exit(0)
 }
 

@@ -178,15 +178,12 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 			continue
 		}
 
-		// check if it hasn't been flushed, only for Exec:true for now
-		if entry.Exec {
-			lastGlobalFlush := flushes[PSF{entry.Pattern, "", ""}].Unix()
-			lastLocalFlush := flushes[PSF{entry.Pattern, entry.Stream, entry.Filter}].Unix()
-			entryTime := entry.T.Unix()
-
-			if lastLocalFlush > entryTime || lastGlobalFlush > entryTime {
-				continue
-			}
+		// check if it hasn't been flushed
+		lastGlobalFlush := flushes[PSF{entry.Pattern, "", ""}].Unix()
+		lastLocalFlush := flushes[PSF{entry.Pattern, entry.Stream, entry.Filter}].Unix()
+		entryTime := entry.T.Unix()
+		if lastLocalFlush > entryTime || lastGlobalFlush > entryTime {
+			continue
 		}
 
 		// store matches
@@ -201,7 +198,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// replay executions
 		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
 			if startup {
-				flushToMatchesC <- PF{entry.Pattern, filter}
+				flushToMatchesC <- FlushMatchOrder{entry.Pattern, nil}
 				filter.sendActions(entry.Pattern, entry.T)
 			}
 
