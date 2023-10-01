@@ -16,6 +16,8 @@ and all its heavy default configuration.
 in my view, a security-oriented program should be simple to configure (`sudo` is a very bad example!)
 and an always-running daemon should be implemented in a fast language.
 
+<a href="https://u.ppom.me/reaction.webm">📽️ french example</a>
+
 ## configuration
 
 this configuration file is all that should be needed to prevent bruteforce attacks on an ssh server.
