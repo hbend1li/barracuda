@@ -23,10 +23,8 @@ type Request struct {
 }
 
 type Response struct {
-	Err            error
-	ClientStatus   ClientStatus
-	FlushedMatches map[string]map[string]int
-	FlushedActions map[string]map[string]map[string]int
+	Err          error
+	ClientStatus ClientStatus
 }
 
 func SendAndRetrieve(data Request) Response {
@@ -50,20 +48,23 @@ func SendAndRetrieve(data Request) Response {
 }
 
 type PatternStatus struct {
-	Matches int                 `yaml:"matches_since_last_trigger"`
-	Actions map[string][]string `yaml:"pending_actions"`
+	Matches int                 `yaml:"matches"`
+	Actions map[string][]string `yaml:"actions"`
 }
 type MapPatternStatus map[string]*PatternStatus
+type MapPatternStatusFlush MapPatternStatus
+
 type ClientStatus map[string]map[string]MapPatternStatus
+type ClientStatusFlush ClientStatus
 
 // This block is made to hide pending_actions when empty
 // and matches_since_last_trigger when zero
 type FullPatternStatus PatternStatus
 type MatchesStatus struct {
-	Matches int `yaml:"matches_since_last_trigger"`
+	Matches int `yaml:"matches"`
 }
 type ActionsStatus struct {
-	Actions map[string][]string `yaml:"pending_actions"`
+	Actions map[string][]string `yaml:"actions"`
 }
 
 func (mps MapPatternStatus) MarshalYAML() (interface{}, error) {
@@ -79,6 +80,35 @@ func (mps MapPatternStatus) MarshalYAML() (interface{}, error) {
 			} else {
 				ret[k] = MatchesStatus{v.Matches}
 			}
+		}
+	}
+	return ret, nil
+}
+
+func (mps MapPatternStatusFlush) MarshalYAML() (interface{}, error) {
+	var ret interface{}
+	for _, v := range mps {
+		if v.Matches == 0 {
+			if len(v.Actions) != 0 {
+				ret = ActionsStatus{v.Actions}
+			}
+		} else {
+			if len(v.Actions) != 0 {
+				ret = v
+			} else {
+				ret = MatchesStatus{v.Matches}
+			}
+		}
+	}
+	return ret, nil
+}
+
+func (csf ClientStatusFlush) MarshalYAML() (interface{}, error) {
+	ret := make(map[string]map[string]MapPatternStatusFlush)
+	for k, v := range csf {
+		ret[k] = make(map[string]MapPatternStatusFlush)
+		for kk, vv := range v {
+			ret[k][kk] = MapPatternStatusFlush(vv)
 		}
 	}
 	return ret, nil
@@ -112,10 +142,7 @@ func ClientFlush(pattern, streamfilter string) {
 		log.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
-	text, err := yaml.Marshal(struct {
-		Matches map[string]map[string]int
-		Actions map[string]map[string]map[string]int
-	}{response.FlushedMatches, response.FlushedActions})
+	text, err := yaml.Marshal(ClientStatusFlush(response.ClientStatus))
 	if err != nil {
 		log.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}

@@ -127,14 +127,14 @@ func ActionsManager() {
 			actionsLock.Unlock()
 			action.exec(pattern)
 		case fo := <-flushToActionsC:
-			ret := make(map[*Action]int)
+			ret := make(ActionsMap)
 			actionsLock.Lock()
 			for pa := range actions {
 				if pa.p == fo.p {
 					for range actions[pa] {
 						pa.a.exec(pa.p)
 					}
-					ret[pa.a] = len(actions[pa])
+					ret[pa] = actions[pa]
 					delete(actions, pa)
 				}
 			}
@@ -188,12 +188,12 @@ func MatchesManager() {
 }
 
 func matchesManagerHandleFlush(fo FlushMatchOrder) {
-	ret := make(map[*Filter]int)
+	ret := make(MatchesMap)
 	matchesLock.Lock()
 	for pf := range matches {
 		if fo.p == pf.p {
 			if fo.ret != nil {
-				ret[pf.f] = len(matches[pf])
+				ret[pf] = matches[pf]
 			}
 			delete(matches, pf)
 		}

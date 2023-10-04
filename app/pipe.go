@@ -6,15 +6,16 @@ import (
 	"net"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
-func genClientStatus() ClientStatus {
+func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_actionsLock, local_matchesLock *sync.Mutex) ClientStatus {
 	cs := make(ClientStatus)
-	matchesLock.Lock()
+	local_matchesLock.Lock()
 
 	// Painful data manipulation
-	for pf, times := range matches {
+	for pf, times := range local_matches {
 		pattern, filter := pf.p, pf.f
 		if cs[filter.stream.name] == nil {
 			cs[filter.stream.name] = make(map[string]MapPatternStatus)
@@ -25,11 +26,11 @@ func genClientStatus() ClientStatus {
 		cs[filter.stream.name][filter.name][pattern] = &PatternStatus{len(times), nil}
 	}
 
-	matchesLock.Unlock()
-	actionsLock.Lock()
+	local_matchesLock.Unlock()
+	local_actionsLock.Lock()
 
 	// Painful data manipulation
-	for pa := range actions {
+	for pa, times := range local_actions {
 		pattern, action := pa.p, pa.a
 		if cs[action.filter.stream.name] == nil {
 			cs[action.filter.stream.name] = make(map[string]MapPatternStatus)
@@ -44,37 +45,12 @@ func genClientStatus() ClientStatus {
 		if ps.Actions == nil {
 			ps.Actions = make(map[string][]string)
 		}
-		for then := range actions[pa] {
+		for then := range times {
 			ps.Actions[action.name] = append(ps.Actions[action.name], then.Format(time.DateTime))
 		}
 	}
-	actionsLock.Unlock()
+	local_actionsLock.Unlock()
 	return cs
-}
-
-func genFlushedMatches(og map[*Filter]int) map[string]map[string]int {
-	ret := make(map[string]map[string]int)
-	for filter, nb := range og {
-		if ret[filter.stream.name] == nil {
-			ret[filter.stream.name] = make(map[string]int)
-		}
-		ret[filter.stream.name][filter.name] = nb
-	}
-	return ret
-}
-
-func genFlushedActions(og map[*Action]int) map[string]map[string]map[string]int {
-	ret := make(map[string]map[string]map[string]int)
-	for action, nb := range og {
-		if ret[action.filter.stream.name] == nil {
-			ret[action.filter.stream.name] = make(map[string]map[string]int)
-		}
-		if ret[action.filter.stream.name][action.filter.name] == nil {
-			ret[action.filter.stream.name][action.filter.name] = make(map[string]int)
-		}
-		ret[action.filter.stream.name][action.filter.name][action.name] = nb
-	}
-	return ret
 }
 
 func createOpenSocket() net.Listener {
@@ -120,17 +96,17 @@ func SocketManager(streams map[string]*Stream) {
 
 			switch request.Request {
 			case Show:
-				response.ClientStatus = genClientStatus()
+				response.ClientStatus = genClientStatus(actions, matches, &actionsLock, &matchesLock)
 			case Flush:
 				le := LogEntry{time.Now(), request.Pattern, "", "", false}
-				matches := FlushMatchOrder{request.Pattern, make(chan map[*Filter]int)}
-				actions := FlushActionOrder{request.Pattern, make(chan map[*Action]int)}
-				flushToMatchesC <- matches
-				flushToActionsC <- actions
+				matchesC := FlushMatchOrder{request.Pattern, make(chan MatchesMap)}
+				actionsC := FlushActionOrder{request.Pattern, make(chan ActionsMap)}
+				flushToMatchesC <- matchesC
+				flushToActionsC <- actionsC
 				flushToDatabaseC <- le
 
-				response.FlushedMatches = genFlushedMatches(<-matches.ret)
-				response.FlushedActions = genFlushedActions(<-actions.ret)
+				var lock sync.Mutex
+				response.ClientStatus = genClientStatus(<-actionsC.ret, <-matchesC.ret, &lock, &lock)
 			default:
 				log.Println("ERROR Invalid Message from cli: unrecognised Request type")
 				return

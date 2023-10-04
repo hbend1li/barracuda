@@ -102,9 +102,9 @@ type PAT struct {
 
 type FlushMatchOrder struct {
 	p   string
-	ret chan map[*Filter]int
+	ret chan MatchesMap
 }
 type FlushActionOrder struct {
 	p   string
-	ret chan map[*Action]int
+	ret chan ActionsMap
 }
