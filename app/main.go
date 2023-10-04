@@ -56,6 +56,9 @@ func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
 	}
 }
 
+// FIXME add this options for show & flush
+// -l/--limit .STREAM[.FILTER]         # limit to stream and filter
+// -f/--format yaml|json               # (default: yaml)
 func basicUsage() {
 	const (
 		bold  = "\033[1m"
@@ -75,19 +78,17 @@ func basicUsage() {
   # print a configuration file example
 
 ` + bold + `reaction show` + reset + `
-  # show which actions are still to be run
+  # show current matches and which actions are still to be run
   # (e.g know what is currenly banned)
 
   # options:
-    -f/--format yaml|json               # (default: yaml)
-    -l/--limit .STREAM[.FILTER]         # limit to stream and filter
     -s/--socket SOCKET                  # path to the client-daemon communication socket
 
 ` + bold + `reaction flush` + reset + ` TARGET
-  # run currently pending actions for the specified TARGET
+  # run currently active matches and pending actions for the specified TARGET
+  # (then show flushed matches and actions)
 
   # options:
-    -l/--limit .STREAM[.FILTER]         # limit to stream and filter
     -s/--socket SOCKET                  # path to the client-daemon communication socket
 
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE          # test REGEX against LINE
