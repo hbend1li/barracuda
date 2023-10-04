@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/google/go-jsonnet"
 )
 
 func (c *Conf) setup() {
@@ -131,13 +132,21 @@ func (c *Conf) setup() {
 
 func parseConf(filename string) *Conf {
 
-	data, err := os.ReadFile(filename)
+	data, err := os.Open(filename)
 	if err != nil {
 		log.Fatalln("FATAL Failed to read configuration file:", err)
 	}
 
 	var conf Conf
-	err = yaml.Unmarshal(data, &conf)
+	if filename[len(filename)-4:] == ".yml" || filename[len(filename)-5:] == ".yaml" {
+		err = jsonnet.NewYAMLToJSONDecoder(data).Decode(&conf)
+	} else {
+		var jsondata string
+		jsondata, err = jsonnet.MakeVM().EvaluateFile(filename)
+		if err == nil {
+			err = json.Unmarshal([]byte(jsondata), &conf)
+		}
+	}
 	if err != nil {
 		log.Fatalln("FATAL Failed to parse configuration file:", err)
 	}

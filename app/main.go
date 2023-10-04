@@ -57,8 +57,7 @@ func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
 }
 
 // FIXME add this options for show & flush
-// -l/--limit .STREAM[.FILTER]         # limit to stream and filter
-// -f/--format yaml|json               # (default: yaml)
+// -l/--limit .STREAM[.FILTER]      # limit to stream and filter
 func basicUsage() {
 	const (
 		bold  = "\033[1m"
@@ -70,9 +69,9 @@ func basicUsage() {
   # start the daemon
 
   # options:
-    -c/--config CONFIG_FILE             # configuration file (required)
-    -s/--socket SOCKET                  # path to the client-daemon communication socket
-                                        # (default: /run/reaction/reaction.sock)
+    -c/--config CONFIG_FILE          # configuration file in json, jsonnet or yaml format (required)
+    -s/--socket SOCKET               # path to the client-daemon communication socket
+                                     # (default: /run/reaction/reaction.sock)
 
 ` + bold + `reaction example-conf` + reset + `
   # print a configuration file example
@@ -82,17 +81,19 @@ func basicUsage() {
   # (e.g know what is currenly banned)
 
   # options:
-    -s/--socket SOCKET                  # path to the client-daemon communication socket
+    -s/--socket SOCKET               # path to the client-daemon communication socket
+    -f/--format yaml|json            # (default: yaml)
 
 ` + bold + `reaction flush` + reset + ` TARGET
   # run currently active matches and pending actions for the specified TARGET
   # (then show flushed matches and actions)
 
   # options:
-    -s/--socket SOCKET                  # path to the client-daemon communication socket
+    -s/--socket SOCKET               # path to the client-daemon communication socket
+    -f/--format yaml|json            # (default: yaml)
 
-` + bold + `reaction test-regex` + reset + ` REGEX LINE          # test REGEX against LINE
-cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX    # test REGEX against each line of FILE
+` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
+cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
 `)
 }
 
@@ -133,13 +134,9 @@ func Main() {
 		queryFormat := addFormatFlag(f)
 		limit := addLimitFlag(f)
 		subCommandParse(f, 0)
-		// if *queryFormat != "yaml" && *queryFormat != "json" {
-		// 	fmt.Println("only `yaml` and `json` formats are supported.")
-		// 	f.PrintDefaults()
-		// 	os.Exit(1)
-		// }
-		if *queryFormat != "yaml" {
-			fmt.Println("for now, only `yaml` format is supported.")
+		if *queryFormat != "yaml" && *queryFormat != "json" {
+			fmt.Println("only yaml and json formats are supported")
+			f.PrintDefaults()
 			os.Exit(1)
 		}
 		if *limit != "" {
@@ -147,12 +144,18 @@ func Main() {
 			os.Exit(1)
 		}
 		// f.Arg(0) is "" if there is no remaining argument
-		ClientShow(*limit)
+		ClientShow(*limit, *queryFormat)
 
 	case "flush":
 		SocketPath = addSocketFlag(f)
+		queryFormat := addFormatFlag(f)
 		limit := addLimitFlag(f)
 		subCommandParse(f, 1)
+		if *queryFormat != "yaml" && *queryFormat != "json" {
+			fmt.Println("only yaml and json formats are supported")
+			f.PrintDefaults()
+			os.Exit(1)
+		}
 		if f.Arg(0) == "" {
 			fmt.Println("subcommand flush takes one TARGET argument")
 			basicUsage()
@@ -162,7 +165,7 @@ func Main() {
 			fmt.Println("for now, -l/--limit is not supported")
 			os.Exit(1)
 		}
-		ClientFlush(f.Arg(0), f.Arg(1))
+		ClientFlush(f.Arg(0), *limit, *queryFormat)
 
 	case "test-regex":
 		// socket not needed, no interaction with the daemon
@@ -178,7 +181,7 @@ func Main() {
 			os.Exit(1)
 		}
 		if f.Arg(1) == "" {
-			fmt.Println("INFO  no second argument. reading from stdin.")
+			fmt.Println("INFO  no second argument: reading from stdin")
 
 			MatchStdin(regex)
 		} else {

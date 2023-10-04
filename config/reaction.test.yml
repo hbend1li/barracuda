@@ -15,7 +15,7 @@ streams:
         regex:
           - '^found <num>$'
         retry: 3
-        retry-period: 30s
+        retryperiod: 30s
         actions:
           damn:
             cmd: [ "echo", "<num>" ]

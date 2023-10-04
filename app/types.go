@@ -8,54 +8,54 @@ import (
 )
 
 type Conf struct {
-	Patterns map[string]*Pattern `yaml:"patterns"`
-	Streams  map[string]*Stream  `yaml:"streams"`
+	Patterns map[string]*Pattern `json:"patterns"`
+	Streams  map[string]*Stream  `json:"streams"`
 }
 
 type Pattern struct {
-	Regex  string   `yaml:"regex"`
-	Ignore []string `yaml:"ignore"`
+	Regex  string   `json:"regex"`
+	Ignore []string `json:"ignore"`
 
-	name           string `yaml:"-"`
-	nameWithBraces string `yaml:"-"`
+	name           string `json:"-"`
+	nameWithBraces string `json:"-"`
 }
 
 // Stream, Filter & Action structures must never be copied.
 // They're always referenced through pointers
 
 type Stream struct {
-	name string `yaml:"-"`
+	name string `json:"-"`
 
-	Cmd     []string           `yaml:"cmd"`
-	Filters map[string]*Filter `yaml:"filters"`
+	Cmd     []string           `json:"cmd"`
+	Filters map[string]*Filter `json:"filters"`
 }
 
 type Filter struct {
-	stream *Stream `yaml:"-"`
-	name   string  `yaml:"-"`
+	stream *Stream `json:"-"`
+	name   string  `json:"-"`
 
-	Regex         []string        `yaml:"regex"`
-	compiledRegex []regexp.Regexp `yaml:"-"`
-	pattern       *Pattern        `yaml:"-"`
+	Regex         []string        `json:"regex"`
+	compiledRegex []regexp.Regexp `json:"-"`
+	pattern       *Pattern        `json:"-"`
 
-	Retry         int           `yaml:"retry"`
-	RetryPeriod   string        `yaml:"retry-period"`
-	retryDuration time.Duration `yaml:"-"`
+	Retry         int           `json:"retry"`
+	RetryPeriod   string        `json:"retryperiod"`
+	retryDuration time.Duration `json:"-"`
 
-	Actions                map[string]*Action `yaml:"actions"`
+	Actions                map[string]*Action `json:"actions"`
 	longuestActionDuration *time.Duration
 }
 
 type Action struct {
-	filter *Filter `yaml:"-"`
-	name   string  `yaml:"-"`
+	filter *Filter `json:"-"`
+	name   string  `json:"-"`
 
-	Cmd []string `yaml:"cmd"`
+	Cmd []string `json:"cmd"`
 
-	After         string        `yaml:"after"`
-	afterDuration time.Duration `yaml:"-"`
+	After         string        `json:"after"`
+	afterDuration time.Duration `json:"-"`
 
-	OnExit bool `yaml:"onexit"`
+	OnExit bool `json:"onexit"`
 }
 
 type LogEntry struct {

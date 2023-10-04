@@ -35,12 +35,12 @@ streams:
           # <ip> is predefined in the patterns section
           # ip's regex is inserted in the following regex
           - authentication failure;.*rhost=<ip>
-        # if retry and retry-period are defined,
+        # if retry and retryperiod are defined,
         # the actions will only take place if a same pattern is
-        # found `retry` times in a `retry-period` interval
+        # found `retry` times in a `retryperiod` interval
         retry: 3
         # format is defined here: https://pkg.go.dev/time#ParseDuration
-        retry-period: 6h
+        retryperiod: 6h
         # actions are run by the filter when regexes are matched
         actions:
           # actions have a user-defined name
@@ -50,7 +50,7 @@ streams:
           unban:
             cmd:  *iptablesunban
             # if after is defined, the action will not take place immediately, but after a specified duration
-            # same format as retry-period
+            # same format as retryperiod
             after: 48h
             # let's say reaction is quitting. does it run all those pending commands which had an `after` duration set?
             # if you want reaction to run those pending commands before exiting, you can set this:

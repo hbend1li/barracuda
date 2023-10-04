@@ -3,13 +3,14 @@ package app
 import (
 	"bufio"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"regexp"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -48,8 +49,8 @@ func SendAndRetrieve(data Request) Response {
 }
 
 type PatternStatus struct {
-	Matches int                 `yaml:"matches"`
-	Actions map[string][]string `yaml:"actions"`
+	Matches int                 `json:"matches,omitempty"`
+	Actions map[string][]string `json:"actions,omitempty"`
 }
 type MapPatternStatus map[string]*PatternStatus
 type MapPatternStatusFlush MapPatternStatus
@@ -57,53 +58,14 @@ type MapPatternStatusFlush MapPatternStatus
 type ClientStatus map[string]map[string]MapPatternStatus
 type ClientStatusFlush ClientStatus
 
-// This block is made to hide pending_actions when empty
-// and matches_since_last_trigger when zero
-type FullPatternStatus PatternStatus
-type MatchesStatus struct {
-	Matches int `yaml:"matches"`
-}
-type ActionsStatus struct {
-	Actions map[string][]string `yaml:"actions"`
-}
-
-func (mps MapPatternStatus) MarshalYAML() (interface{}, error) {
-	ret := make(map[string]interface{})
-	for k, v := range mps {
-		if v.Matches == 0 {
-			if len(v.Actions) != 0 {
-				ret[k] = ActionsStatus{v.Actions}
-			}
-		} else {
-			if len(v.Actions) != 0 {
-				ret[k] = v
-			} else {
-				ret[k] = MatchesStatus{v.Matches}
-			}
-		}
-	}
-	return ret, nil
-}
-
-func (mps MapPatternStatusFlush) MarshalYAML() (interface{}, error) {
-	var ret interface{}
+func (mps MapPatternStatusFlush) MarshalJSON() ([]byte, error) {
 	for _, v := range mps {
-		if v.Matches == 0 {
-			if len(v.Actions) != 0 {
-				ret = ActionsStatus{v.Actions}
-			}
-		} else {
-			if len(v.Actions) != 0 {
-				ret = v
-			} else {
-				ret = MatchesStatus{v.Matches}
-			}
-		}
+		return json.Marshal(v)
 	}
-	return ret, nil
+	return []byte(""), nil
 }
 
-func (csf ClientStatusFlush) MarshalYAML() (interface{}, error) {
+func (csf ClientStatusFlush) MarshalJSON() ([]byte, error) {
 	ret := make(map[string]map[string]MapPatternStatusFlush)
 	for k, v := range csf {
 		ret[k] = make(map[string]MapPatternStatusFlush)
@@ -111,7 +73,7 @@ func (csf ClientStatusFlush) MarshalYAML() (interface{}, error) {
 			ret[k][kk] = MapPatternStatusFlush(vv)
 		}
 	}
-	return ret, nil
+	return json.Marshal(ret)
 }
 
 // end block
@@ -122,13 +84,19 @@ func usage(err string) {
 	log.Fatalln(err)
 }
 
-func ClientShow(streamfilter string) {
+func ClientShow(streamfilter, format string) {
 	response := SendAndRetrieve(Request{Show, streamfilter})
 	if response.Err != nil {
 		log.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
-	text, err := yaml.Marshal(response.ClientStatus)
+	var text []byte
+	var err error
+	if format == "json" {
+		text, err = json.MarshalIndent(response.ClientStatus, "", "  ")
+	} else {
+		text, err = yaml.Marshal(response.ClientStatus)
+	}
 	if err != nil {
 		log.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}
@@ -136,13 +104,19 @@ func ClientShow(streamfilter string) {
 	os.Exit(0)
 }
 
-func ClientFlush(pattern, streamfilter string) {
+func ClientFlush(pattern, streamfilter, format string) {
 	response := SendAndRetrieve(Request{Flush, pattern})
 	if response.Err != nil {
 		log.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
-	text, err := yaml.Marshal(ClientStatusFlush(response.ClientStatus))
+	var text []byte
+	var err error
+	if format == "json" {
+		text, err = json.MarshalIndent(ClientStatusFlush(response.ClientStatus), "", "  ")
+	} else {
+		text, err = yaml.Marshal(ClientStatusFlush(response.ClientStatus))
+	}
 	if err != nil {
 		log.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}

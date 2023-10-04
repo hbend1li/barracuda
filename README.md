@@ -10,7 +10,7 @@ and takes action, such as banning ips.
 
 ## rationale
 
-i was using fail2ban since quite a long time, but i was a bit frustrated by it's cpu consumption
+i was using fail2ban since quite a long time, but i was a bit frustrated by its cpu consumption
 and all its heavy default configuration.
 
 in my view, a security-oriented program should be simple to configure (`sudo` is a very bad example!)
@@ -20,7 +20,7 @@ and an always-running daemon should be implemented in a fast language.
 
 ## configuration
 
-this configuration file is all that should be needed to prevent bruteforce attacks on an ssh server.
+this configuration file is all that should be needed to prevent brute force attacks on an ssh server.
 
 see [reaction.service](./config/reaction.service) and [reaction.yml](./app/reaction.yml) for the fully explained examples.
 
@@ -32,6 +32,9 @@ definitions:
 
 patterns:
   ip: '(([0-9]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
+  ignore:
+    - '127.0.0.1'
+    - '::1'
 
 streams:
   ssh:
@@ -39,16 +42,56 @@ streams:
     filters:
       failedlogin:
         regex:
-          - authentication failure;.*rhost=<ip>
+          - 'authentication failure;.*rhost=<ip>'
         retry: 3
-        retry-period: 6h
+        retryperiod: '6h'
         actions:
           ban:
             cmd: *iptablesban
           unban:
-            cmd:  *iptablesunban
-            after: 48h
+            cmd: *iptablesunban
+            after: '48h'
 ```
+
+jsonnet is also supported:
+
+`/etc/reaction.jsonnet`
+```jsonnet
+local iptablesban = ['iptables', '-w', '-A', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+local iptablesunban = ['iptables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+{
+  patterns: {
+    ip: {
+      regex: @'(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})',
+      ignore: ['127.0.0.1', '::1'],
+    },
+  },
+  streams: {
+    ssh: {
+      cmd: ['journalctl', '-fu', 'sshd.service'],
+      filters: {
+        failedlogin: {
+          regex: [ @'authentication failure;.*rhost=<ip>' ],
+          retry: 3,
+          retryperiod: '6h',
+          actions: {
+            ban: {
+              cmd: iptablesban,
+            },
+            unban: {
+              cmd: iptablesunban,
+              after: '48h',
+              onexit: true,
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+note that both yaml and jsonnet are extensions of json, so it is also inherently supported.
 
 `/etc/systemd/system/reaction.service`
 ```systemd
@@ -92,7 +135,7 @@ $ go build .
 
 in addition to the [package](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/pkgs/reaction/default.nix)
 and [module](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction.nix)
-that i didn't tried to upstream to nixpkgs yet (although they are ready), i use extensively reaction on my servers. if you're using nixos,
+that i didn't try to upstream to nixpkgs yet (although they are ready), i use extensively reaction on my servers. if you're using nixos,
 consider reading and building upon [my own building blocks](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-variables.nix),
 [my own non-root reaction conf, including conf for SSH, port scanning & Nginx common attack URLS](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-custom.nix),
 and the configuration for [nextcloud](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/file.ppom.me.nix#L53),
