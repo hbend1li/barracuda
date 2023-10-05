@@ -3,8 +3,10 @@
 // JSONNET is a superset of JSON, so one can write plain JSON files if wanted.
 
 // variables defined for later use.
-local iptablesban = ['iptables', '-w', '-A', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
-local iptablesunban = ['iptables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+local iptablesban = ['ip46tables', '-w', '-A', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+local iptablesunban = ['ip46tables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+// ip46tables is a minimal C program (only POSIX dependencies) present as a subdirectory.
+// it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
 {
   // patterns are substitued in regexes.

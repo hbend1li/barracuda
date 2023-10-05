@@ -32,9 +32,6 @@ definitions:
 
 patterns:
   ip: '(([0-9]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
-  ignore:
-    - '127.0.0.1'
-    - '::1'
 
 streams:
   ssh:
@@ -63,7 +60,6 @@ local iptablesunban = ['iptables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-
   patterns: {
     ip: {
       regex: @'(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})',
-      ignore: ['127.0.0.1', '::1'],
     },
   },
   streams: {
@@ -91,7 +87,7 @@ local iptablesunban = ['iptables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-
 }
 ```
 
-note that both yaml and jsonnet are extensions of json, so it is also inherently supported.
+note that both yaml and jsonnet are extensions of json, so json is also inherently supported.
 
 `/etc/systemd/system/reaction.service`
 ```systemd
@@ -124,11 +120,24 @@ if you don't know where to start it, `/var/lib/reaction` should be a sane choice
 
 the socket allowing communication between the cli and server will be created at `/run/reaction/reaction.socket`.
 
+### `ip46tables`
+
+`ip46tables` is a minimal c program present in its own subdirectory with only standard posix dependencies.
+
+it permits to configure `iptables` and `ip6tables` at the same time.
+it will execute `iptables` when detecting ipv4, `ip6tables` when detecting ipv6 and both if no ip address is present on the command line.
+
 ### compilation
 
-you'll need the go toolchain.
+you'll need the go toolchain for reaction and a c compiler for ip46tables.
+```shell
+$ make
+```
+
+alternatively,
 ```shell
 $ go build .
+$ gcc ip46tables.d/ip46tables.c -o ip46tables
 ```
 
 ### nixos

@@ -3,8 +3,10 @@
 # using YAML anchors `&name` and pointers `*name`
 # definitions are not readed by reaction
 definitions:
-  - &iptablesban [ "iptables" "-w" "-A" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
-  - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+  - &iptablesban [ "ip46tables" "-w" "-A" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+  - &iptablesunban [ "ip46tables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+# ip46tables is a minimal C program (only POSIX dependencies) present as a subdirectory.
+# it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
 # patterns are substitued in regexes.
 # when a filter performs an action, it replaces the found pattern

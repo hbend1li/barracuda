@@ -7,20 +7,22 @@ WantedBy=multi-user.target
 ExecStart=/path/to/reaction -c /etc/reaction.yml
 
 # Create an iptables chain for reaction
-ExecStartPre=/path/to/iptables -w -N reaction
+ExecStartPre=/path/to/ip46tables -w -N reaction
 # Set its default to ACCEPT
-ExecStartPre=/path/to/iptables -w -A reaction -j ACCEPT
+ExecStartPre=/path/to/ip46tables -w -A reaction -j ACCEPT
 # Always accept 127.0.0.1
-ExecStartPre=/path/to/iptables -w -I reaction 1 -s 127.0.0.1 -j ACCEPT
+ExecStartPre=/path/to/ip46tables -w -I reaction 1 -s 127.0.0.1 -j ACCEPT
+# Always accept ::1
+ExecStartPre=/path/to/ip46tables -w -I reaction 1 -s ::1 -j ACCEPT
 # Insert this chain as the first item of the INPUT chain (for incoming connections)
-ExecStartPre=/path/to/iptables -w -I INPUT -p all -j reaction
+ExecStartPre=/path/to/ip46tables -w -I INPUT -p all -j reaction
 
 # Remove the chain from the INPUT chain
-ExecStopPost=/path/to/iptables -w -D INPUT -p all -j reaction
+ExecStopPost=/path/to/ip46tables -w -D INPUT -p all -j reaction
 # Empty the chain
-ExecStopPost=/path/to/iptables -w -F reaction
+ExecStopPost=/path/to/ip46tables -w -F reaction
 # Delete the chain
-ExecStopPost=/path/to/iptables -w -X reaction
+ExecStopPost=/path/to/ip46tables -w -X reaction
 
 # Ask systemd to create /var/lib/reaction (/var/lib/ is implicit)
 StateDirectory=reaction

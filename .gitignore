@@ -1,4 +1,5 @@
 /reaction
+/ip46tables
 /reaction*.db
 /reaction*.sock
 /result
