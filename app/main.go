@@ -97,7 +97,7 @@ cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX again
 `)
 }
 
-//go:embed reaction.yml
+//go:embed example.yml
 var exampleConf string
 
 func Main() {

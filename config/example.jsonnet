@@ -1,6 +1,7 @@
 // This file is using JSONNET, a complete configuration language based on JSON
 // See https://jsonnet.org
 // JSONNET is a superset of JSON, so one can write plain JSON files if wanted.
+// Note that YAML is also supported.
 
 // variables defined for later use.
 local iptablesban = ['ip46tables', '-w', '-A', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
@@ -29,7 +30,7 @@ local iptablesunban = ['ip46tables', '-w', '-D', 'reaction', '1', '-s', '<ip>', 
     ssh: {
       // note that if the command is not in environment's `PATH`
       // its full path must be given.
-      cmd: ['journalctl', '-fu', 'sshd.service'],
+      cmd: ['journalctl', '-n0', '-fu', 'sshd.service'],
       // filters run actions when they match regexes on a stream
       filters: {
         // filters have a user-defined name
