@@ -3,11 +3,12 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	"framagit.org/ppom/reaction/logger"
 
 	"github.com/google/go-jsonnet"
 )
@@ -20,23 +21,23 @@ func (c *Conf) setup() {
 		pattern.nameWithBraces = fmt.Sprintf("<%s>", pattern.name)
 
 		if pattern.Regex == "" {
-			log.Fatalf("FATAL Bad configuration: pattern's regex %v is empty!", patternName)
+			logger.Fatalf("Bad configuration: pattern's regex %v is empty!", patternName)
 		}
 
 		compiled, err := regexp.Compile(fmt.Sprintf("^%v$", pattern.Regex))
 		if err != nil {
-			log.Fatalf("FATAL Bad configuration: pattern %v doesn't compile!", patternName)
+			logger.Fatalf("Bad configuration: pattern %v doesn't compile!", patternName)
 		}
 		c.Patterns[patternName].Regex = fmt.Sprintf("(?P<%s>%s)", patternName, pattern.Regex)
 		for _, ignore := range pattern.Ignore {
 			if !compiled.MatchString(ignore) {
-				log.Fatalf("FATAL Bad configuration: pattern ignore '%v' doesn't match pattern %v! It should be fixed or removed.", ignore, pattern.nameWithBraces)
+				logger.Fatalf("Bad configuration: pattern ignore '%v' doesn't match pattern %v! It should be fixed or removed.", ignore, pattern.nameWithBraces)
 			}
 		}
 	}
 
 	if len(c.Streams) == 0 {
-		log.Fatalln("FATAL Bad configuration: no streams configured!")
+		logger.Fatalln("Bad configuration: no streams configured!")
 	}
 	for streamName := range c.Streams {
 
@@ -44,11 +45,11 @@ func (c *Conf) setup() {
 		stream.name = streamName
 
 		if strings.Contains(stream.name, ".") {
-			log.Fatalln("FATAL Bad configuration: character '.' is not allowed in stream names", stream.name)
+			logger.Fatalln("Bad configuration: character '.' is not allowed in stream names", stream.name)
 		}
 
 		if len(stream.Filters) == 0 {
-			log.Fatalln("FATAL Bad configuration: no filters configured in", stream.name)
+			logger.Fatalln("Bad configuration: no filters configured in", stream.name)
 		}
 		for filterName := range stream.Filters {
 
@@ -57,23 +58,23 @@ func (c *Conf) setup() {
 			filter.name = filterName
 
 			if strings.Contains(filter.name, ".") {
-				log.Fatalln("FATAL Bad configuration: character '.' is not allowed in filter names", filter.name)
+				logger.Fatalln("Bad configuration: character '.' is not allowed in filter names", filter.name)
 			}
 			// Parse Duration
 			if filter.RetryPeriod == "" {
 				if filter.Retry > 1 {
-					log.Fatalln("FATAL Bad configuration: retry but no retry-duration in", stream.name, ".", filter.name)
+					logger.Fatalln("Bad configuration: retry but no retry-duration in", stream.name, ".", filter.name)
 				}
 			} else {
 				retryDuration, err := time.ParseDuration(filter.RetryPeriod)
 				if err != nil {
-					log.Fatalln("FATAL Bad configuration: Failed to parse retry time in", stream.name, ".", filter.name, ":", err)
+					logger.Fatalln("Bad configuration: Failed to parse retry time in", stream.name, ".", filter.name, ":", err)
 				}
 				filter.retryDuration = retryDuration
 			}
 
 			if len(filter.Regex) == 0 {
-				log.Fatalln("FATAL Bad configuration: no regexes configured in", stream.name, ".", filter.name)
+				logger.Fatalln("Bad configuration: no regexes configured in", stream.name, ".", filter.name)
 			}
 			// Compute Regexes
 			// Look for Patterns inside Regexes
@@ -86,7 +87,7 @@ func (c *Conf) setup() {
 						} else if filter.pattern == pattern {
 							// no op
 						} else {
-							log.Fatalf(
+							logger.Fatalf(
 								"Bad configuration: Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
 								filter.pattern.name, patternName, streamName, filterName,
 							)
@@ -101,7 +102,7 @@ func (c *Conf) setup() {
 			}
 
 			if len(filter.Actions) == 0 {
-				log.Fatalln("FATAL Bad configuration: no actions configured in", stream.name, ".", filter.name)
+				logger.Fatalln("Bad configuration: no actions configured in", stream.name, ".", filter.name)
 			}
 			for actionName := range filter.Actions {
 
@@ -110,17 +111,17 @@ func (c *Conf) setup() {
 				action.name = actionName
 
 				if strings.Contains(action.name, ".") {
-					log.Fatalln("FATAL Bad configuration: character '.' is not allowed in action names", action.name)
+					logger.Fatalln("Bad configuration: character '.' is not allowed in action names", action.name)
 				}
 				// Parse Duration
 				if action.After != "" {
 					afterDuration, err := time.ParseDuration(action.After)
 					if err != nil {
-						log.Fatalln("FATAL Bad configuration: Failed to parse after time in ", stream.name, ".", filter.name, ".", action.name, ":", err)
+						logger.Fatalln("Bad configuration: Failed to parse after time in ", stream.name, ".", filter.name, ".", action.name, ":", err)
 					}
 					action.afterDuration = afterDuration
 				} else if action.OnExit {
-					log.Fatalln("FATAL Bad configuration: Cannot have `onexit: true` without an `after` directive in", stream.name, ".", filter.name, ".", action.name)
+					logger.Fatalln("Bad configuration: Cannot have `onexit: true` without an `after` directive in", stream.name, ".", filter.name, ".", action.name)
 				}
 				if filter.longuestActionDuration == nil || filter.longuestActionDuration.Milliseconds() < action.afterDuration.Milliseconds() {
 					filter.longuestActionDuration = &action.afterDuration
@@ -134,7 +135,7 @@ func parseConf(filename string) *Conf {
 
 	data, err := os.Open(filename)
 	if err != nil {
-		log.Fatalln("FATAL Failed to read configuration file:", err)
+		logger.Fatalln("Failed to read configuration file:", err)
 	}
 
 	var conf Conf
@@ -148,7 +149,7 @@ func parseConf(filename string) *Conf {
 		}
 	}
 	if err != nil {
-		log.Fatalln("FATAL Failed to parse configuration file:", err)
+		logger.Fatalln("Failed to parse configuration file:", err)
 	}
 
 	conf.setup()

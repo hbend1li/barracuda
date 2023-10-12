@@ -2,12 +2,13 @@ package app
 
 import (
 	"encoding/gob"
-	"log"
 	"net"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"framagit.org/ppom/reaction/logger"
 )
 
 func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_actionsLock, local_matchesLock *sync.Mutex) ClientStatus {
@@ -56,19 +57,19 @@ func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_a
 func createOpenSocket() net.Listener {
 	err := os.MkdirAll(path.Dir(*SocketPath), 0755)
 	if err != nil {
-		log.Fatalln("FATAL Failed to create socket directory")
+		logger.Fatalln("Failed to create socket directory")
 	}
 	_, err = os.Stat(*SocketPath)
 	if err == nil {
-		log.Println("WARN  socket", SocketPath, "already exists: Is the daemon already running? Deleting.")
+		logger.Println(logger.WARN, "socket", SocketPath, "already exists: Is the daemon already running? Deleting.")
 		err = os.Remove(*SocketPath)
 		if err != nil {
-			log.Fatalln("FATAL Failed to remove socket:", err)
+			logger.Fatalln("Failed to remove socket:", err)
 		}
 	}
 	ln, err := net.Listen("unix", *SocketPath)
 	if err != nil {
-		log.Fatalln("FATAL Failed to create socket:", err)
+		logger.Fatalln("Failed to create socket:", err)
 	}
 	return ln
 }
@@ -80,7 +81,7 @@ func SocketManager(streams map[string]*Stream) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println("ERROR Failed to open connection from cli:", err)
+			logger.Println(logger.ERROR, "Failed to open connection from cli:", err)
 			continue
 		}
 		go func(conn net.Conn) {
@@ -90,7 +91,7 @@ func SocketManager(streams map[string]*Stream) {
 
 			err := gob.NewDecoder(conn).Decode(&request)
 			if err != nil {
-				log.Println("ERROR Invalid Message from cli:", err)
+				logger.Println(logger.ERROR, "Invalid Message from cli:", err)
 				return
 			}
 
@@ -108,13 +109,13 @@ func SocketManager(streams map[string]*Stream) {
 				var lock sync.Mutex
 				response.ClientStatus = genClientStatus(<-actionsC.ret, <-matchesC.ret, &lock, &lock)
 			default:
-				log.Println("ERROR Invalid Message from cli: unrecognised Request type")
+				logger.Println(logger.ERROR, "Invalid Message from cli: unrecognised Request type")
 				return
 			}
 
 			err = gob.NewEncoder(conn).Encode(response)
 			if err != nil {
-				log.Println("ERROR Can't respond to cli:", err)
+				logger.Println(logger.ERROR, "Can't respond to cli:", err)
 				return
 			}
 		}(conn)

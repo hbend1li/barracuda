@@ -5,11 +5,11 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"regexp"
 
+	"framagit.org/ppom/reaction/logger"
 	"sigs.k8s.io/yaml"
 )
 
@@ -31,19 +31,19 @@ type Response struct {
 func SendAndRetrieve(data Request) Response {
 	conn, err := net.Dial("unix", *SocketPath)
 	if err != nil {
-		log.Fatalln("Error opening connection top daemon:", err)
+		logger.Fatalln("Error opening connection top daemon:", err)
 	}
 	defer conn.Close()
 
 	err = gob.NewEncoder(conn).Encode(data)
 	if err != nil {
-		log.Fatalln("Can't send message:", err)
+		logger.Fatalln("Can't send message:", err)
 	}
 
 	var response Response
 	err = gob.NewDecoder(conn).Decode(&response)
 	if err != nil {
-		log.Fatalln("Invalid answer from daemon:", err)
+		logger.Fatalln("Invalid answer from daemon:", err)
 	}
 	return response
 }
@@ -81,13 +81,13 @@ func (csf ClientStatusFlush) MarshalJSON() ([]byte, error) {
 func usage(err string) {
 	fmt.Println("Usage: reactionc")
 	fmt.Println("Usage: reactionc flush <PATTERN>")
-	log.Fatalln(err)
+	logger.Fatalln(err)
 }
 
 func ClientShow(streamfilter, format string) {
 	response := SendAndRetrieve(Request{Show, streamfilter})
 	if response.Err != nil {
-		log.Fatalln("Received error from daemon:", response.Err)
+		logger.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
 	var text []byte
@@ -98,7 +98,7 @@ func ClientShow(streamfilter, format string) {
 		text, err = yaml.Marshal(response.ClientStatus)
 	}
 	if err != nil {
-		log.Fatalln("Failed to convert daemon binary response to text format:", err)
+		logger.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}
 	fmt.Println(string(text))
 	os.Exit(0)
@@ -107,7 +107,7 @@ func ClientShow(streamfilter, format string) {
 func ClientFlush(pattern, streamfilter, format string) {
 	response := SendAndRetrieve(Request{Flush, pattern})
 	if response.Err != nil {
-		log.Fatalln("Received error from daemon:", response.Err)
+		logger.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
 	}
 	var text []byte
@@ -118,7 +118,7 @@ func ClientFlush(pattern, streamfilter, format string) {
 		text, err = yaml.Marshal(ClientStatusFlush(response.ClientStatus))
 	}
 	if err != nil {
-		log.Fatalln("Failed to convert daemon binary response to text format:", err)
+		logger.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}
 	fmt.Println(string(text))
 	os.Exit(0)

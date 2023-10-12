@@ -4,9 +4,10 @@ import (
 	"encoding/gob"
 	"errors"
 	"io"
-	"log"
 	"os"
 	"time"
+
+	"framagit.org/ppom/reaction/logger"
 )
 
 const (
@@ -19,10 +20,10 @@ func openDB(path string) (bool, *ReadDB) {
 	file, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.Printf("WARN  No DB found at %s. It's ok if this is the first time reaction is running.\n", path)
+			logger.Printf(logger.WARN, "No DB found at %s. It's ok if this is the first time reaction is running.\n", path)
 			return true, nil
 		}
-		log.Fatalln("FATAL Failed to open DB:", err)
+		logger.Fatalln("Failed to open DB:", err)
 	}
 	return false, &ReadDB{file, gob.NewDecoder(file)}
 }
@@ -30,7 +31,7 @@ func openDB(path string) (bool, *ReadDB) {
 func createDB(path string) *WriteDB {
 	file, err := os.Create(path)
 	if err != nil {
-		log.Fatalln("FATAL Failed to create DB:", err)
+		logger.Fatalln("Failed to create DB:", err)
 	}
 	return &WriteDB{file, gob.NewEncoder(file)}
 }
@@ -53,11 +54,11 @@ func (c *Conf) manageLogs(logDB *WriteDB, flushDB *WriteDB) {
 			// let's say 100 000 entries ~ 10 MB
 			if cpt == 100_000 {
 				cpt = 0
-				log.Printf("INFO  Rotating database...")
+				logger.Printf(logger.INFO, "Rotating database...")
 				logDB.file.Close()
 				flushDB.file.Close()
 				logDB, flushDB = c.RotateDB(false)
-				log.Printf("INFO  Rotated database")
+				logger.Printf(logger.INFO, "Rotated database")
 			}
 		}
 	}
@@ -78,10 +79,10 @@ func (c *Conf) RotateDB(startup bool) (*WriteDB, *WriteDB) {
 	}
 	doesntExist, flushReadDB = openDB(flushDBName)
 	if doesntExist {
-		log.Println("WARN  Strange! No flushes db, opening /dev/null instead")
+		logger.Println(logger.WARN, "Strange! No flushes db, opening /dev/null instead")
 		doesntExist, flushReadDB = openDB("/dev/null")
 		if doesntExist {
-			log.Fatalln("Opening dummy /dev/null failed")
+			logger.Fatalln("Opening dummy /dev/null failed")
 		}
 	}
 
@@ -91,18 +92,18 @@ func (c *Conf) RotateDB(startup bool) (*WriteDB, *WriteDB) {
 
 	err = logReadDB.file.Close()
 	if err != nil {
-		log.Fatalln("FATAL Failed to close old DB:", err)
+		logger.Fatalln("Failed to close old DB:", err)
 	}
 
 	// It should be ok to rename an open file
 	err = os.Rename(logDBNewName, logDBName)
 	if err != nil {
-		log.Fatalln("FATAL Failed to replace old DB with new one:", err)
+		logger.Fatalln("Failed to replace old DB with new one:", err)
 	}
 
 	err = os.Remove(flushDBName)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Fatalln("FATAL Failed to delete old DB:", err)
+		logger.Fatalln("Failed to delete old DB:", err)
 	}
 
 	flushWriteDB = createDB(flushDBName)
@@ -116,11 +117,11 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 	defer func() {
 		for sf, t := range discardedEntries {
 			if t > 0 {
-				log.Printf("WARN  info discarded %v times from the DBs: stream/filter not found: %s.%s\n", t, sf.s, sf.f)
+				logger.Printf(logger.WARN, "info discarded %v times from the DBs: stream/filter not found: %s.%s\n", t, sf.s, sf.f)
 			}
 		}
 		if malformedEntries > 0 {
-			log.Printf("WARN  %v malformed entries discarded from the DBs\n", malformedEntries)
+			logger.Printf(logger.WARN, "%v malformed entries discarded from the DBs\n", malformedEntries)
 		}
 	}()
 
@@ -210,6 +211,6 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 func encodeOrFatal(enc *gob.Encoder, entry LogEntry) {
 	err := enc.Encode(entry)
 	if err != nil {
-		log.Fatalln("FATAL Failed to write to new DB:", err)
+		logger.Fatalln("Failed to write to new DB:", err)
 	}
 }
