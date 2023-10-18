@@ -23,22 +23,10 @@ func cmdStdout(commandline []string) chan *string {
 		if err != nil {
 			logger.Fatalln("couldn't open stdout on command:", err)
 		}
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			logger.Fatalln("couldn't open stderr on command:", err)
-		}
 		if err := cmd.Start(); err != nil {
 			logger.Fatalln("couldn't start command:", err)
 		}
 		defer stdout.Close()
-		defer stderr.Close()
-		func() {
-			errscan := bufio.NewScanner(stderr)
-			for errscan.Scan() {
-				line := errscan.Text()
-				logger.Println(logger.WARN, "stderr:", line)
-			}
-		}()
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
