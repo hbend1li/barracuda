@@ -1,8 +1,6 @@
-local directory = '~/.local/share/watch';
 // Those strings will be substitued in each shell() call
 local substitutions = [
-  ['OUTFILE', directory + '/logs-$(date %+F)'],
-  ['TMUXFILE', directory + '/tmux'],
+  ['OUTFILE', '"$HOME/.local/share/watch/logs-$(date +%F)"'],
   ['DATE', '"$(date "+%F %T")"'],
 ];
 
@@ -18,19 +16,17 @@ local shell(prg) = [
   sub(prg),
 ];
 
-{
-  // Startup is currently not implemented
-  startup: shell(|||
-    mkdir -p "$(dirname OUTFILE)"
-    echo DATE start >> OUTFILE
-    # tmux set-hook -g pane-focus-in[50] new-session -d 'echo tmux >> TMUXFILE'
-  |||),
+local log(line) = shell('echo DATE ' + std.strReplace(line, '\n', ' ') + '>> OUTFILE');
 
-  // Stop is currently not implemented
-  stop: shell(|||
-    tmux set-hook -ug pane-focus-in[50]
-    echo DATE stop >> OUTFILE
-  |||),
+{
+  start: [
+    shell('mkdir -p "$(dirname OUTFILE)"'),
+    log('start'),
+  ],
+
+  stop: [
+    log('stop'),
+  ],
 
   patterns: {
     all: { regex: '.*' },
@@ -47,7 +43,7 @@ local shell(prg) = [
         send: {
           regex: ['^<all>$'],
           actions: {
-            send: { cmd: shell('echo DATE focus <all> >> OUTFILE') },
+            send: { cmd: log('focus <all>') },
           },
         },
       },
@@ -55,12 +51,13 @@ local shell(prg) = [
 
     // Be notified when user is away
     swayidle: {
-      cmd: ['swayidle', 'timeout', '60', 'echo sleep', 'resume', 'echo resume'],
+      // FIXME echo stop and start instead?
+      cmd: ['swayidle', 'timeout', '30', 'echo sleep', 'resume', 'echo resume'],
       filters: {
         send: {
           regex: ['^<all>$'],
           actions: {
-            send: { cmd: shell('echo DATE <all> >> OUTFILE') },
+            send: { cmd: log('<all>') },
           },
         },
       },
@@ -92,7 +89,7 @@ local shell(prg) = [
     //     send: {
     //       regex: ['^tmux <all>$'],
     //       actions: {
-    //         send: { cmd: shell('echo DATE tmux <all> >> OUTFILE') },
+    //         send: { cmd: log('tmux <all>') },
     //       },
     //     },
     //   },

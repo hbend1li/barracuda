@@ -3,8 +3,8 @@
 # using YAML anchors `&name` and pointers `*name`
 # definitions are not readed by reaction
 definitions:
-  - &iptablesban [ "ip46tables" "-w" "-A" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
-  - &iptablesunban [ "ip46tables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "DROP" ]
+  - &iptablesban [ "ip46tables", "-w", "-A", "reaction", "1", "-s", "<ip>", "-j", "DROP" ]
+  - &iptablesunban [ "ip46tables", "-w", "-D", "reaction", "1", "-s", "<ip>", "-j", "DROP" ]
 # ip46tables is a minimal C program (only POSIX dependencies) present as a subdirectory.
 # it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
@@ -18,6 +18,20 @@ patterns:
       - 127.0.0.1
       - ::1
 
+# Those commands will be executed in order at start, before everything else
+start:
+  - [ "ip46tables", "-w", "-N", "reaction" ]
+  - [ "ip46tables", "-w", "-A", "reaction", "-j", "ACCEPT" ]
+  - [ "ip46tables", "-w", "-I", "reaction", "1", "-s", "127.0.0.1", "-j", "ACCEPT" ]
+  - [ "ip46tables", "-w", "-I", "INPUT", "-p", "all", "-j", "reaction" ]
+
+# Those commands will be executed in order at stop, after everything else
+stop:
+  - [ "ip46tables", "-w,", "-D", "INPUT", "-p", "all", "-j", "reaction" ]
+  - [ "ip46tables", "-w", "-F", "reaction" ]
+  - [ "ip46tables", "-w", "-X", "reaction" ]
+
+
 # streams are commands
 # they're run and their ouptut is captured
 # *example:* `tail -f /var/log/nginx/access.log`
@@ -27,7 +41,7 @@ streams:
   ssh:
     # note that if the command is not in environment's `PATH`
     # its full path must be given.
-    cmd: [ "journalctl" "-n0" "-fu" "sshd.service" ]
+    cmd: [ "journalctl", "-n0", "-fu", "sshd.service" ]
     # filters run actions when they match regexes on a stream
     filters:
       # filters have a user-defined name

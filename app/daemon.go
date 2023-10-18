@@ -39,6 +39,15 @@ func cmdStdout(commandline []string) chan *string {
 	return lines
 }
 
+func runCommands(commands [][]string, moment string) {
+	for _, command := range commands {
+		cmd := exec.Command(command[0], command[1:]...)
+		if err := cmd.Start(); err != nil {
+			logger.Printf(logger.ERROR, "couldn't execute %v command: %v", moment, err)
+		}
+	}
+}
+
 func (p *Pattern) notAnIgnore(match *string) bool {
 	for _, ignore := range p.Ignore {
 		if ignore == *match {
@@ -323,6 +332,8 @@ func Daemon(confFilename string) {
 	actions = make(ActionsMap)
 	matches = make(MatchesMap)
 
+	runCommands(conf.Start, "start")
+
 	go DatabaseManager(conf)
 	go MatchesManager()
 	go ActionsManager()
@@ -348,16 +359,16 @@ func Daemon(confFilename string) {
 			logger.Printf(logger.ERROR, "%s stream finished", finishedStream.name)
 			nbStreamsInExecution--
 			if nbStreamsInExecution == 0 {
-				quit()
+				quit(conf)
 			}
 		case <-sigs:
 			logger.Printf(logger.INFO, "Received SIGINT/SIGTERM, exiting")
-			quit()
+			quit(conf)
 		}
 	}
 }
 
-func quit() {
+func quit(conf *Conf) {
 	// send stop to StreamManager·s
 	close(stopStreams)
 	logger.Println(logger.INFO, "Waiting for Streams to finish...")
@@ -369,6 +380,8 @@ func quit() {
 	// stop all actions
 	logger.Println(logger.INFO, "Waiting for Actions to finish...")
 	wgActions.Wait()
+	// run stop commands
+	runCommands(conf.Stop, "stop")
 	// delete pipe
 	err := os.Remove(*SocketPath)
 	if err != nil {

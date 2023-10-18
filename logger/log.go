@@ -69,8 +69,10 @@ func Printf(level Level, format string, args ...any) {
 }
 
 func Fatalln(args ...any) {
-	level := FATAL
-	log.Fatalln(level.String(), args)
+	newargs := make([]any, 0)
+	newargs = append(newargs, FATAL)
+	newargs = append(newargs, args...)
+	log.Fatalln(newargs...)
 }
 
 func Fatalf(format string, args ...any) {

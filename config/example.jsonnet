@@ -1,11 +1,13 @@
 // This file is using JSONNET, a complete configuration language based on JSON
 // See https://jsonnet.org
 // JSONNET is a superset of JSON, so one can write plain JSON files if wanted.
-// Note that YAML is also supported.
+// Note that YAML is also supported, see ./example.yml
 
+// A JSONNET function
+local iptables(args) = ['ip46tables', '-w'] + args;
 // variables defined for later use.
-local iptablesban = ['ip46tables', '-w', '-A', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
-local iptablesunban = ['ip46tables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+local iptablesban = iptables(['-A', 'reaction', '1', '-s', '<ip>', '-j', 'drop']);
+local iptablesunban = iptables(['-D', 'reaction', '1', '-s', '<ip>', '-j', 'drop']);
 // ip46tables is a minimal C program (only POSIX dependencies) present as a subdirectory.
 // it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
@@ -20,6 +22,30 @@ local iptablesunban = ['ip46tables', '-w', '-D', 'reaction', '1', '-s', '<ip>', 
       ignore: ['127.0.0.1', '::1'],
     },
   },
+
+  // Those commands will be executed in order at start, before everything else
+  start: [
+    // Create an iptables chain for reaction
+    iptables(['-N', 'reaction']),
+    // Set its default to ACCEPT
+    iptables(['-A', 'reaction', '-j', 'ACCEPT']),
+    // Always accept 127.0.0.1
+    iptables(['-I', 'reaction', '1', '-s', '127.0.0.1', '-j', 'ACCEPT']),
+    // Always accept ::1
+    iptables(['-I', 'reaction', '1', '-s', '::1', '-j', 'ACCEPT']),
+    // Insert this chain as the first item of the INPUT chain (for incoming connections)
+    iptables(['-I', 'INPUT', '-p', 'all', '-j', 'reaction']),
+  ],
+
+  // Those commands will be executed in order at stop, after everything else
+  stop: [
+    // Remove the chain from the INPUT chain
+    iptables(['-D,', 'INPUT', '-p', 'all', '-j', 'reaction']),
+    // Empty the chain
+    iptables(['-F,', 'reaction']),
+    // Delete the chain
+    iptables(['-X,', 'reaction']),
+  ],
 
   // streams are commands
   // they're run and their ouptut is captured

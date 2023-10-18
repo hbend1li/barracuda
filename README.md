@@ -4,7 +4,7 @@ a program that scans program outputs, such as logs,
 for repeated patterns, such as failed login attempts,
 and takes action, such as banning ips.
 
-(adapted from [fail2ban](http://fail2ban.org)'s presentation 😄)
+(adapted from [ fail2ban ](http://fail2ban.org)'s presentation 😄)
 
 🚧 this program hasn't received external audit. however, it already works well on my servers 🚧
 
@@ -22,16 +22,27 @@ and an always-running daemon should be implemented in a fast language.
 
 this configuration file is all that should be needed to prevent brute force attacks on an ssh server.
 
-see [reaction.service](./config/reaction.service) and [reaction.yml](./app/reaction.yml) for the fully explained examples.
+see [ reaction.service ](./config/reaction.service) and [reaction.yml](./app/reaction.yml) for the fully explained examples.
 
 `/etc/reaction.yml`
 ```yaml
 definitions:
-  - &iptablesban [ "iptables" "-w" "-I" "reaction" "1" "-s" "<ip>" "-j" "block" ]
-  - &iptablesunban [ "iptables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "block" ]
+  - &iptablesban [ "ip46tables" "-w" "-I" "reaction" "1" "-s" "<ip>" "-j" "block" ]
+  - &iptablesunban [ "ip46tables" "-w" "-D" "reaction" "1" "-s" "<ip>" "-j" "block" ]
 
 patterns:
-  ip: '(([0-9]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
+  ip: '(([ 0-9 ]{1,3}\.){3}[0-9]{1,3})|([0-9a-fA-F:]{2,90})'
+
+start:
+  - [ "ip46tables", "-w", "-N", "reaction" ]
+  - [ "ip46tables", "-w", "-A", "reaction", "-j", "ACCEPT" ]
+  - [ "ip46tables", "-w", "-I", "reaction", "1", "-s", "127.0.0.1", "-j", "ACCEPT" ]
+  - [ "ip46tables", "-w", "-I", "INPUT", "-p", "all", "-j", "reaction" ]
+
+stop:
+  - [ "ip46tables", "-w," "-D," "INPUT", "-p", "all", "-j", "reaction" ]
+  - [ "ip46tables", "-w," "-F," "reaction" ]
+  - [ "ip46tables", "-w," "-X," "reaction" ]
 
 streams:
   ssh:
@@ -54,17 +65,29 @@ jsonnet is also supported:
 
 `/etc/reaction.jsonnet`
 ```jsonnet
-local iptablesban = ['iptables', '-w', '-A', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
-local iptablesunban = ['iptables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-j', 'DROP'];
+local iptables(args) = [ 'ip46tables', '-w' ] + args;
+local iptablesban(ip) = iptables([ '-A', 'reaction', '1', '-s', ip, '-j', 'DROP' ]);
+local iptablesunban(ip) = iptables([ '-D', 'reaction', '1', '-s', ip, '-j', 'DROP' ]);
 {
   patterns: {
     ip: {
-      regex: @'(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})',
+      regex: @'(?:(?:[ 0-9 ]{1,3}\.){3}[0-9]{1,3})|(?:[0-9a-fA-F:]{2,90})',
     },
+  },
+  start: {
+    iptables([ "-N", "reaction" ]),
+    iptables([ "-A", "reaction", "-j", "ACCEPT" ]),
+    iptables([ "-I", "reaction", "1", "-s", "127.0.0.1", "-j", "ACCEPT" ]),
+    iptables([ "-I", "INPUT", "-p", "all", "-j", "reaction" ]),
+  },
+  stop: {
+    iptables([ "-D,", "INPUT", "-p", "all", "-j", "reaction" ]),
+    iptables([ "-F,", "reaction" ]),
+    iptables([ "-X,", "reaction" ]),
   },
   streams: {
     ssh: {
-      cmd: ['journalctl', '-fu', 'sshd.service'],
+      cmd: [ 'journalctl', '-fu', 'sshd.service' ],
       filters: {
         failedlogin: {
           regex: [ @'authentication failure;.*rhost=<ip>' ],
@@ -72,10 +95,10 @@ local iptablesunban = ['iptables', '-w', '-D', 'reaction', '1', '-s', '<ip>', '-
           retryperiod: '6h',
           actions: {
             ban: {
-              cmd: iptablesban,
+              cmd: iptablesban('<ip>'),
             },
             unban: {
-              cmd: iptablesunban,
+              cmd: iptablesunban('<ip>'),
               after: '48h',
               onexit: true,
             },
@@ -91,20 +114,11 @@ note that both yaml and jsonnet are extensions of json, so json is also inherent
 
 `/etc/systemd/system/reaction.service`
 ```systemd
-[Unit]
+[ Unit ]
 WantedBy=multi-user.target
 
-[Service]
+[ Service ]
 ExecStart=/path/to/reaction -c /etc/reaction.yml
-
-ExecStartPre=/path/to/iptables -w -N reaction
-ExecStartPre=/path/to/iptables -w -A reaction -j ACCEPT
-ExecStartPre=/path/to/iptables -w -I reaction 1 -s 127.0.0.1 -j ACCEPT
-ExecStartPre=/path/to/iptables -w -I INPUT -p all -j reaction
-
-ExecStopPost=/path/to/iptables -w -D INPUT -p all -j reaction
-ExecStopPost=/path/to/iptables -w -F reaction
-ExecStopPost=/path/to/iptables -w -X reaction
 
 StateDirectory=reaction
 RuntimeDirectory=reaction
@@ -142,11 +156,11 @@ $ gcc ip46tables.d/ip46tables.c -o ip46tables
 
 ### nixos
 
-in addition to the [package](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/pkgs/reaction/default.nix)
-and [module](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction.nix)
+in addition to the [ package ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/pkgs/reaction/default.nix)
+and [ module ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction.nix)
 that i didn't try to upstream to nixpkgs yet (although they are ready), i use extensively reaction on my servers. if you're using nixos,
-consider reading and building upon [my own building blocks](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-variables.nix),
-[my own non-root reaction conf, including conf for SSH, port scanning & Nginx common attack URLS](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-custom.nix),
-and the configuration for [nextcloud](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/file.ppom.me.nix#L53),
-[vaultwarden](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/vaultwarden.nix#L45),
-and [maddy](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/mail.nix#L74). see also an [example](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/mail.nix#L85) where it does something else than banning IPs.
+consider reading and building upon [ my own building blocks ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-variables.nix),
+[ my own non-root reaction conf, including conf for SSH, port scanning & Nginx common attack URLS ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/common/reaction-custom.nix),
+and the configuration for [ nextcloud ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/file.ppom.me.nix#L53),
+[ vaultwarden ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/vaultwarden.nix#L45),
+and [ maddy ](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/mail.nix#L74). see also an [example](https://framagit.org/ppom/nixos/-/blob/cf5448b21ae3386265485308a6cd077e8068ad77/modules/musi/mail.nix#L85) where it does something else than banning IPs.
