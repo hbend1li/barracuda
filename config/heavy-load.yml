@@ -15,7 +15,7 @@ streams:
         regex:
           - '^found <num>$'
         retry: 50
-        retry-period: 1m
+        retryperiod: 1m
         actions:
           damn:
             cmd: [ "echo", "<num>" ]
@@ -30,7 +30,7 @@ streams:
         regex:
           - '^prout <num>$'
         retry: 50
-        retry-period: 1m
+        retryperiod: 1m
         actions:
           damn:
             cmd: [ "echo", "<num>" ]
@@ -45,7 +45,7 @@ streams:
         regex:
           - '^nanana <num>$'
         retry: 50
-        retry-period: 2m
+        retryperiod: 2m
         actions:
           damn:
             cmd: [ "true" ]
@@ -60,7 +60,7 @@ streams:
         regex:
           - '^nomatch <num>$'
         retry: 50
-        retry-period: 2m
+        retryperiod: 2m
         actions:
           damn:
             cmd: [ "echo", "<num>" ]

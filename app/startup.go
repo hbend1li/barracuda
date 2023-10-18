@@ -63,7 +63,7 @@ func (c *Conf) setup() {
 			// Parse Duration
 			if filter.RetryPeriod == "" {
 				if filter.Retry > 1 {
-					logger.Fatalln("Bad configuration: retry but no retry-duration in", stream.name, ".", filter.name)
+					logger.Fatalln("Bad configuration: retry but no retryduration in", stream.name, ".", filter.name)
 				}
 			} else {
 				retryDuration, err := time.ParseDuration(filter.RetryPeriod)
