@@ -221,6 +221,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// store matches
 		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
 			if startup {
+        logger.Println(logger.WARN, "entry", entry,"filter",filter)
 				startupMatchesC <- PFT{entry.Pattern, filter, entry.T}
 			}
 
@@ -230,6 +231,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		// replay executions
 		if entry.Exec && entry.T.Add(*filter.longuestActionDuration).Unix() > now.Unix() {
 			if startup {
+        logger.Println(logger.WARN, "entry", entry)
 				flushToMatchesC <- FlushMatchOrder{entry.Pattern, nil}
 				filter.sendActions(entry.Pattern, entry.T)
 			}
