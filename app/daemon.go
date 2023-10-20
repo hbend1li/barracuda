@@ -187,7 +187,7 @@ func MatchesManager() {
 			matchesManagerHandleFlush(fo)
 		case pft = <-matchesC:
 
-			entry := LogEntry{pft.t, pft.p, pft.f.stream.name, pft.f.name, false}
+			entry := LogEntry{pft.t, pft.p, pft.f.stream.name, pft.f.name, 0, false}
 
 			entry.Exec = matchesManagerHandleMatch(pft)
 

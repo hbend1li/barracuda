@@ -64,6 +64,7 @@ type LogEntry struct {
 	T              time.Time
 	Pattern        string
 	Stream, Filter string
+	SF             int
 	Exec           bool
 }
 
