@@ -133,15 +133,13 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 	}()
 
-	var err error
-	var entry LogEntry
-	var filter *Filter
-
 	// pattern, stream, fitler → last flush
 	flushes := make(map[PSF]time.Time)
 	for {
+		var entry LogEntry
+		var filter *Filter
 		// decode entry
-		err = flushDec.Decode(&entry)
+		err := flushDec.Decode(&entry)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -167,9 +165,11 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 
 	now := time.Now()
 	for {
+		var entry LogEntry
+		var filter *Filter
 
 		// decode entry
-		err = logDec.Decode(&entry)
+		err := logDec.Decode(&entry)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -180,34 +180,23 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 
 		// retrieve related stream & filter
 		if entry.Stream == "" && entry.Filter == "" {
-			if entry.SF != 0 {
-				sf, ok := readSF2int[entry.SF]
-				if ok {
-					entry.Stream = sf.s
-					entry.Filter = sf.f
-				} else {
-					discardedEntries[SF{"", ""}]++
-					continue
-				}
-			} else {
+			sf, ok := readSF2int[entry.SF]
+			if !ok {
 				discardedEntries[SF{"", ""}]++
 				continue
 			}
-			// Only one of Stream, Filter is non-empty
-			// } else if entry.Stream == "" || entry.Filter == "" {
-			// discardedEntries[SF{"", ""}]++
-			// continue
-		} else {
-			if stream := c.Streams[entry.Stream]; stream != nil {
-				filter = stream.Filters[entry.Filter]
-			}
-			if filter == nil {
-				discardedEntries[SF{entry.Stream, entry.Filter}]++
-				continue
-			}
-			if entry.SF != 0 {
-				readSF2int[entry.SF] = SF{entry.Stream, entry.Filter}
-			}
+			entry.Stream = sf.s
+			entry.Filter = sf.f
+		}
+		if stream := c.Streams[entry.Stream]; stream != nil {
+			filter = stream.Filters[entry.Filter]
+		}
+		if filter == nil {
+			discardedEntries[SF{entry.Stream, entry.Filter}]++
+			continue
+		}
+		if entry.SF != 0 {
+			readSF2int[entry.SF] = SF{entry.Stream, entry.Filter}
 		}
 
 		// check if it hasn't been flushed
