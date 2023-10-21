@@ -163,6 +163,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		flushes[PSF{entry.Pattern, entry.Stream, entry.Filter}] = entry.T
 	}
 
+	lastTimeCpt := int64(0)
 	now := time.Now()
 	for {
 		var entry LogEntry
@@ -207,6 +208,12 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 			continue
 		}
 
+		// restore time
+		if entry.T.IsZero() {
+			entry.T = time.Unix(entry.S, lastTimeCpt)
+		}
+		lastTimeCpt++
+
 		// store matches
 		if !entry.Exec && entry.T.Add(filter.retryDuration).Unix() > now.Unix() {
 			if startup {
@@ -229,6 +236,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 }
 
 func encodeOrFatal(enc *gob.Encoder, entry LogEntry, writeSF2int map[SF]int, writeCounter *int) {
+	// Stream/Filter reduction
 	sf, ok := writeSF2int[SF{entry.Stream, entry.Filter}]
 	if ok {
 		entry.SF = sf
@@ -238,6 +246,11 @@ func encodeOrFatal(enc *gob.Encoder, entry LogEntry, writeSF2int map[SF]int, wri
 		entry.SF = *writeCounter
 		writeSF2int[SF{entry.Stream, entry.Filter}] = *writeCounter
 		*writeCounter++
+	}
+	// Time reduction
+	if !entry.T.IsZero() {
+		entry.S = entry.T.Unix()
+		entry.T = time.Time{}
 	}
 	err := enc.Encode(entry)
 	if err != nil {

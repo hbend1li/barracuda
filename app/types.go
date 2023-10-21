@@ -62,6 +62,7 @@ type Action struct {
 
 type LogEntry struct {
 	T              time.Time
+	S              int64
 	Pattern        string
 	Stream, Filter string
 	SF             int
