@@ -84,11 +84,35 @@ func usage(err string) {
 	logger.Fatalln(err)
 }
 
-func ClientShow(streamfilter, format string) {
-	response := SendAndRetrieve(Request{Show, streamfilter})
+func ClientShow(format, stream, filter string) {
+	response := SendAndRetrieve(Request{Show, ""})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
-		os.Exit(1)
+	}
+	// Limit to stream, filter if exists
+	if stream != "" {
+		exists := false
+		for streamName := range response.ClientStatus {
+			if stream == streamName {
+				if filter != "" {
+					for filterName := range response.ClientStatus[streamName] {
+						if filter == filterName {
+							exists = true
+						} else {
+							delete(response.ClientStatus[streamName], filterName)
+						}
+					}
+				} else {
+					exists = true
+				}
+			} else {
+				delete(response.ClientStatus, streamName)
+			}
+		}
+		if !exists {
+			logger.Println(logger.WARN, "No matching stream.filter items found. This does not mean it doesn't exist, maybe it just didn't receive any match.")
+      os.Exit(1)
+		}
 	}
 	var text []byte
 	var err error

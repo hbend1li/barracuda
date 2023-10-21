@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"framagit.org/ppom/reaction/logger"
 )
@@ -48,6 +49,10 @@ func addLevelFlag(f *flag.FlagSet) *string {
 	return addStringFlag([]string{"l", "loglevel"}, "INFO", f)
 }
 
+func addStreamFilterFlag(f *flag.FlagSet) *string {
+	return addStringFlag([]string{"sf", "streamfilter"}, "", f)
+}
+
 func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
 	help := addBoolFlag([]string{"h", "help"}, f)
 	f.Parse(os.Args[2:])
@@ -75,11 +80,11 @@ func basicUsage() {
   # start the daemon
 
   # options:
-    -c/--config CONFIG_FILE          # configuration file in json, jsonnet or yaml format (required)
-    -l/--loglevel LEVEL              # minimum log level to show, in DEBUG, INFO, WARN, ERROR, FATAL
-                                     # (default: INFO)
-    -s/--socket SOCKET               # path to the client-daemon communication socket
-                                     # (default: /run/reaction/reaction.sock)
+    -c/--config CONFIG_FILE            # configuration file in json, jsonnet or yaml format (required)
+    -l/--loglevel LEVEL                # minimum log level to show, in DEBUG, INFO, WARN, ERROR, FATAL
+                                       # (default: INFO)
+    -s/--socket SOCKET                 # path to the client-daemon communication socket
+                                       # (default: /run/reaction/reaction.sock)
 
 ` + bold + `reaction example-conf` + reset + `
   # print a configuration file example
@@ -89,16 +94,17 @@ func basicUsage() {
   # (e.g know what is currenly banned)
 
   # options:
-    -s/--socket SOCKET               # path to the client-daemon communication socket
-    -f/--format yaml|json            # (default: yaml)
+    -s/--socket SOCKET                 # path to the client-daemon communication socket
+    -f/--format yaml|json              # (default: yaml)
+    -sf/--streamfilter STREAM[.FILTER] # only show items related to this STREAM (or STREAM.FILTER)
 
 ` + bold + `reaction flush` + reset + ` TARGET
   # run currently active matches and pending actions for the specified TARGET
   # (then show flushed matches and actions)
 
   # options:
-    -s/--socket SOCKET               # path to the client-daemon communication socket
-    -f/--format yaml|json            # (default: yaml)
+    -s/--socket SOCKET                 # path to the client-daemon communication socket
+    -f/--format yaml|json              # (default: yaml)
 
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
 cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
@@ -117,7 +123,7 @@ func Main() {
 		basicUsage()
 		os.Exit(0)
 	}
-	f := flag.NewFlagSet(os.Args[1], flag.ContinueOnError)
+	f := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
 	switch os.Args[1] {
 	case "help", "-h", "--help":
 		basicUsage()
@@ -155,12 +161,17 @@ func Main() {
 			f.PrintDefaults()
 			os.Exit(1)
 		}
+		stream, filter := "", ""
 		if *limit != "" {
-			logger.Fatalln("for now, -l/--limit is not supported")
-			os.Exit(1)
+			splitSF := strings.Split(*limit, ".")
+			stream = splitSF[0]
+			if len(splitSF) == 2 {
+				filter = splitSF[1]
+			} else if len(splitSF) > 2 {
+				logger.Fatalln("-l/--limit: only one . separator is supported")
+			}
 		}
-		// f.Arg(0) is "" if there is no remaining argument
-		ClientShow(*limit, *queryFormat)
+		ClientShow(*queryFormat, stream, filter)
 
 	case "flush":
 		SocketPath = addSocketFlag(f)
