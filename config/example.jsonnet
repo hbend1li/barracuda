@@ -3,11 +3,8 @@
 // JSONNET is a superset of JSON, so one can write plain JSON files if wanted.
 // Note that YAML is also supported, see ./example.yml
 
-// A JSONNET function
+// JSONNET functions
 local iptables(args) = ['ip46tables', '-w'] + args;
-// variables defined for later use.
-local iptablesban = iptables(['-A', 'reaction', '1', '-s', '<ip>', '-j', 'drop']);
-local iptablesunban = iptables(['-D', 'reaction', '1', '-s', '<ip>', '-j', 'drop']);
 // ip46tables is a minimal C program (only POSIX dependencies) present as a subdirectory.
 // it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
@@ -48,7 +45,7 @@ local iptablesunban = iptables(['-D', 'reaction', '1', '-s', '<ip>', '-j', 'drop
   ],
 
   // streams are commands
-  // they're run and their ouptut is captured
+  // they are run and their ouptut is captured
   // *example:* `tail -f /var/log/nginx/access.log`
   // their output will be used by one or more filters
   streams: {
@@ -77,11 +74,10 @@ local iptablesunban = iptables(['-D', 'reaction', '1', '-s', '<ip>', '-j', 'drop
           actions: {
             // actions have a user-defined name
             ban: {
-              // JSONNET substitutes the variable (defined at the beginning of the file)
-              cmd: iptablesban,
+              cmd: iptables(['-A', 'reaction', '-s', '<ip>', '-j', 'reaction-log-refuse']),
             },
             unban: {
-              cmd: iptablesunban,
+              cmd: iptables(['-D', 'reaction', '-s', '<ip>', '-j', 'reaction-log-refuse']),
               // if after is defined, the action will not take place immediately, but after a specified duration
               // same format as retryperiod
               after: '48h',
@@ -90,7 +86,7 @@ local iptablesunban = iptables(['-D', 'reaction', '1', '-s', '<ip>', '-j', 'drop
               onexit: true,
               // (defaults to false)
               // here it is not useful because we will flush the chain containing the bans anyway
-              // (see /conf/reaction.service)
+              // (with the stop commands)
             },
           },
         },

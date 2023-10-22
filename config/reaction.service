@@ -4,7 +4,7 @@ WantedBy=multi-user.target
 
 # See `man systemd.exec` and `man systemd.service` for most options below
 [Service]
-ExecStart=/path/to/reaction -c /etc/reaction.yml
+ExecStart=/path/to/reaction start -c /etc/reaction.yml
 
 # Ask systemd to create /var/lib/reaction (/var/lib/ is implicit)
 StateDirectory=reaction

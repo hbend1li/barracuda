@@ -118,13 +118,10 @@ func Main() {
 		logger.Fatalln("No argument provided. Try `reaction help`")
 		basicUsage()
 		os.Exit(1)
-	} else if os.Args[1] == "-h" || os.Args[1] == "--help" {
-		basicUsage()
-		os.Exit(0)
 	}
 	f := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
 	switch os.Args[1] {
-	case "help", "-h", "--help":
+	case "help", "-h", "-help", "--help":
 		basicUsage()
 
 	case "example-conf":
@@ -224,7 +221,7 @@ func Main() {
 		}
 
 	default:
-		logger.Fatalln("subcommand not recognized")
+		logger.Fatalf("subcommand %v not recognized. Try `reaction help`", os.Args[1])
 		basicUsage()
 		os.Exit(1)
 	}

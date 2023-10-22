@@ -9,7 +9,7 @@ patterns:
 
 streams:
   tailDown1:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo found $(($i % 100)); done" ]
+    cmd: [ 'sh', '-c', 'sleep 2; seq 100010 | while read i; do echo found $(($i % 100)); done' ]
     filters:
       findIP:
         regex:
@@ -18,13 +18,13 @@ streams:
         retryperiod: 1m
         actions:
           damn:
-            cmd: [ "echo", "<num>" ]
+            cmd: [ 'echo', '<num>' ]
           undamn:
-            cmd: [ "echo", "undamn", "<num>" ]
+            cmd: [ 'echo', 'undamn', '<num>' ]
             after: 1m
             onexit: false
   tailDown2:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo prout $(($i % 100)); done" ]
+    cmd: [ 'sh', '-c', 'sleep 2; seq 100010 | while read i; do echo prout $(($i % 100)); done' ]
     filters:
       findIP:
         regex:
@@ -33,13 +33,13 @@ streams:
         retryperiod: 1m
         actions:
           damn:
-            cmd: [ "echo", "<num>" ]
+            cmd: [ 'echo', '<num>' ]
           undamn:
-            cmd: [ "echo", "undamn", "<num>" ]
+            cmd: [ 'echo', 'undamn', '<num>' ]
             after: 1m
             onexit: false
   tailDown3:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo nanana $(($i % 100)); done" ]
+    cmd: [ 'sh', '-c', 'sleep 2; seq 100010 | while read i; do echo nanana $(($i % 100)); done' ]
     filters:
       findIP:
         regex:
@@ -48,13 +48,13 @@ streams:
         retryperiod: 2m
         actions:
           damn:
-            cmd: [ "true" ]
+            cmd: [ 'true' ]
           undamn:
-            cmd: [ "true" ]
+            cmd: [ 'true' ]
             after: 1m
             onexit: false
   tailDown4:
-    cmd: [ "sh", "-c", "sleep 2; seq 100010 | while read i; do echo nanana $(($i % 100)); done" ]
+    cmd: [ 'sh', '-c', 'sleep 2; seq 100010 | while read i; do echo nanana $(($i % 100)); done' ]
     filters:
       findIP:
         regex:
@@ -63,8 +63,8 @@ streams:
         retryperiod: 2m
         actions:
           damn:
-            cmd: [ "echo", "<num>" ]
+            cmd: [ 'echo', '<num>' ]
           undamn:
-            cmd: [ "echo", "undamn", "<num>" ]
+            cmd: [ 'echo', 'undamn', '<num>' ]
             after: 1m
             onexit: false
