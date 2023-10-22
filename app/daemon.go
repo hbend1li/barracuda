@@ -42,8 +42,17 @@ func cmdStdout(commandline []string) chan *string {
 func runCommands(commands [][]string, moment string) {
 	for _, command := range commands {
 		cmd := exec.Command(command[0], command[1:]...)
+		cmd.WaitDelay = time.Minute
+
+		logger.Printf(logger.INFO, "%v command: run %v\n", moment, command)
+
 		if err := cmd.Start(); err != nil {
-			logger.Printf(logger.ERROR, "couldn't execute %v command: %v", moment, err)
+			logger.Printf(logger.ERROR, "%v command: run %v: %v", moment, command, err)
+		} else {
+			err := cmd.Wait()
+			if err != nil {
+				logger.Printf(logger.ERROR, "%v command: run %v: %v", moment, command, err)
+			}
 		}
 	}
 }

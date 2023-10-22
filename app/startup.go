@@ -45,11 +45,11 @@ func (c *Conf) setup() {
 		stream.name = streamName
 
 		if strings.Contains(stream.name, ".") {
-			logger.Fatalln("Bad configuration: character '.' is not allowed in stream names", stream.name)
+			logger.Fatalf("Bad configuration: character '.' is not allowed in stream names: '%v'", stream.name)
 		}
 
 		if len(stream.Filters) == 0 {
-			logger.Fatalln("Bad configuration: no filters configured in", stream.name)
+			logger.Fatalf("Bad configuration: no filters configured in %v", stream.name)
 		}
 		for filterName := range stream.Filters {
 
@@ -58,23 +58,23 @@ func (c *Conf) setup() {
 			filter.name = filterName
 
 			if strings.Contains(filter.name, ".") {
-				logger.Fatalln("Bad configuration: character '.' is not allowed in filter names", filter.name)
+				logger.Fatalf("Bad configuration: character '.' is not allowed in filter names: '%v'", filter.name)
 			}
 			// Parse Duration
 			if filter.RetryPeriod == "" {
 				if filter.Retry > 1 {
-					logger.Fatalln("Bad configuration: retry but no retryduration in", stream.name, ".", filter.name)
+					logger.Fatalf("Bad configuration: retry but no retryperiod in %v.%v", stream.name, filter.name)
 				}
 			} else {
 				retryDuration, err := time.ParseDuration(filter.RetryPeriod)
 				if err != nil {
-					logger.Fatalln("Bad configuration: Failed to parse retry time in", stream.name, ".", filter.name, ":", err)
+					logger.Fatalf("Bad configuration: Failed to parse retry time in %v.%v: %v", stream.name, filter.name, err)
 				}
 				filter.retryDuration = retryDuration
 			}
 
 			if len(filter.Regex) == 0 {
-				logger.Fatalln("Bad configuration: no regexes configured in", stream.name, ".", filter.name)
+				logger.Fatalf("Bad configuration: no regexes configured in %v.%v", stream.name, filter.name)
 			}
 			// Compute Regexes
 			// Look for Patterns inside Regexes
@@ -140,16 +140,21 @@ func parseConf(filename string) *Conf {
 
 	var conf Conf
 	if filename[len(filename)-4:] == ".yml" || filename[len(filename)-5:] == ".yaml" {
+		logger.Println(logger.DEBUG, "yaml")
 		err = jsonnet.NewYAMLToJSONDecoder(data).Decode(&conf)
+		if err != nil {
+			logger.Fatalln("Failed to parse yaml configuration file:", err)
+		}
 	} else {
+		logger.Println(logger.DEBUG, "json")
 		var jsondata string
 		jsondata, err = jsonnet.MakeVM().EvaluateFile(filename)
 		if err == nil {
 			err = json.Unmarshal([]byte(jsondata), &conf)
 		}
-	}
-	if err != nil {
-		logger.Fatalln("Failed to parse configuration file:", err)
+		if err != nil {
+			logger.Fatalln("Failed to parse json configuration file:", err)
+		}
 	}
 
 	conf.setup()

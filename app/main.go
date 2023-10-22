@@ -115,7 +115,7 @@ var exampleConf string
 
 func Main() {
 	if len(os.Args) <= 1 {
-		logger.Fatalln("No argument provided")
+		logger.Fatalln("No argument provided. Try `reaction help`")
 		basicUsage()
 		os.Exit(1)
 	} else if os.Args[1] == "-h" || os.Args[1] == "--help" {
