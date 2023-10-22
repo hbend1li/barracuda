@@ -84,7 +84,7 @@ func usage(err string) {
 	logger.Fatalln(err)
 }
 
-func ClientShow(format, stream, filter string) {
+func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	response := SendAndRetrieve(Request{Show, ""})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
@@ -111,7 +111,25 @@ func ClientShow(format, stream, filter string) {
 		}
 		if !exists {
 			logger.Println(logger.WARN, "No matching stream.filter items found. This does not mean it doesn't exist, maybe it just didn't receive any match.")
-      os.Exit(1)
+			os.Exit(1)
+		}
+	}
+	// Limit to pattern
+	if regex != nil {
+		for streamName := range response.ClientStatus {
+			for filterName := range response.ClientStatus[streamName] {
+				for patternName := range response.ClientStatus[streamName][filterName] {
+					if !regex.MatchString(patternName) {
+						delete(response.ClientStatus[streamName][filterName], patternName)
+					}
+				}
+				if len(response.ClientStatus[streamName][filterName]) == 0 {
+					delete(response.ClientStatus[streamName], filterName)
+				}
+			}
+			if len(response.ClientStatus[streamName]) == 0 {
+				delete(response.ClientStatus, streamName)
+			}
 		}
 	}
 	var text []byte

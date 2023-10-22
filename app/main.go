@@ -49,8 +49,8 @@ func addLevelFlag(f *flag.FlagSet) *string {
 	return addStringFlag([]string{"l", "loglevel"}, "INFO", f)
 }
 
-func addStreamFilterFlag(f *flag.FlagSet) *string {
-	return addStringFlag([]string{"sf", "streamfilter"}, "", f)
+func addPatternFlag(f *flag.FlagSet) *string {
+	return addStringFlag([]string{"p", "pattern"}, "", f)
 }
 
 func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
@@ -67,8 +67,6 @@ func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
 	}
 }
 
-// FIXME add this options for show & flush
-// -l/--limit .STREAM[.FILTER]      # limit to stream and filter
 func basicUsage() {
 	const (
 		bold  = "\033[1m"
@@ -80,11 +78,11 @@ func basicUsage() {
   # start the daemon
 
   # options:
-    -c/--config CONFIG_FILE            # configuration file in json, jsonnet or yaml format (required)
-    -l/--loglevel LEVEL                # minimum log level to show, in DEBUG, INFO, WARN, ERROR, FATAL
-                                       # (default: INFO)
-    -s/--socket SOCKET                 # path to the client-daemon communication socket
-                                       # (default: /run/reaction/reaction.sock)
+    -c/--config CONFIG_FILE          # configuration file in json, jsonnet or yaml format (required)
+    -l/--loglevel LEVEL              # minimum log level to show, in DEBUG, INFO, WARN, ERROR, FATAL
+                                     # (default: INFO)
+    -s/--socket SOCKET               # path to the client-daemon communication socket
+                                     # (default: /run/reaction/reaction.sock)
 
 ` + bold + `reaction example-conf` + reset + `
   # print a configuration file example
@@ -94,17 +92,18 @@ func basicUsage() {
   # (e.g know what is currenly banned)
 
   # options:
-    -s/--socket SOCKET                 # path to the client-daemon communication socket
-    -f/--format yaml|json              # (default: yaml)
-    -sf/--streamfilter STREAM[.FILTER] # only show items related to this STREAM (or STREAM.FILTER)
+    -s/--socket SOCKET               # path to the client-daemon communication socket
+    -f/--format yaml|json            # (default: yaml)
+    -l/--limit STREAM[.FILTER]       # only show items related to this STREAM (or STREAM.FILTER)
+    -p/--pattern PATTERN             # only show items matching the PATTERN regex
 
 ` + bold + `reaction flush` + reset + ` TARGET
   # run currently active matches and pending actions for the specified TARGET
   # (then show flushed matches and actions)
 
   # options:
-    -s/--socket SOCKET                 # path to the client-daemon communication socket
-    -f/--format yaml|json              # (default: yaml)
+    -s/--socket SOCKET               # path to the client-daemon communication socket
+    -f/--format yaml|json            # (default: yaml)
 
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
 cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
@@ -155,6 +154,7 @@ func Main() {
 		SocketPath = addSocketFlag(f)
 		queryFormat := addFormatFlag(f)
 		limit := addLimitFlag(f)
+		pattern := addPatternFlag(f)
 		subCommandParse(f, 0)
 		if *queryFormat != "yaml" && *queryFormat != "json" {
 			logger.Fatalln("only yaml and json formats are supported")
@@ -171,7 +171,15 @@ func Main() {
 				logger.Fatalln("-l/--limit: only one . separator is supported")
 			}
 		}
-		ClientShow(*queryFormat, stream, filter)
+		var regex *regexp.Regexp
+		var err error
+		if *pattern != "" {
+			regex, err = regexp.Compile(*pattern)
+			if err != nil {
+				logger.Fatalln("-p/--pattern: ", err)
+			}
+		}
+		ClientShow(*queryFormat, stream, filter, regex)
 
 	case "flush":
 		SocketPath = addSocketFlag(f)
