@@ -137,6 +137,8 @@ If you don't know where to start reaction, `/var/lib/reaction` should be a sane 
 It permits to configure `iptables` and `ip6tables` at the same time.
 It will execute `iptables` when detecting ipv4, `ip6tables` when detecting ipv6 and both if no ip address is present on the command line.
 
+## Installation
+
 ### Binaries
 
 Executables are provided [here](https://u.ppom.me/reaction/releases/), for a standard x86-64 linux machine.
