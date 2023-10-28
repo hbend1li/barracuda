@@ -6,4 +6,4 @@ ip46tables: ip46tables.d/ip46tables.c
 	gcc ip46tables.d/ip46tables.c -o ip46tables
 
 reaction: app/* reaction.go go.mod go.sum
-	go build .
+	go build -buildvcs=false .

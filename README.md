@@ -137,6 +137,10 @@ If you don't know where to start reaction, `/var/lib/reaction` should be a sane 
 It permits to configure `iptables` and `ip6tables` at the same time.
 It will execute `iptables` when detecting ipv4, `ip6tables` when detecting ipv6 and both if no ip address is present on the command line.
 
+### Binaries
+
+Executables are provided [here](https://u.ppom.me/reaction/releases/), for a standard x86-64 linux machine.
+
 ### Compilation
 
 You'll need the go toolchain for reaction and a c compiler for ip46tables.
@@ -150,6 +154,11 @@ Alternatively,
 $ go build .
 # creates ./ip46tables
 $ gcc ip46tables.d/ip46tables.c -o ip46tables
+```
+
+Provided binaries in the previous section are compiled this way:
+```shell
+$ docker run -it --rm -v (pwd):/code -w /code golang:1.20 make
 ```
 
 ### NixOS
