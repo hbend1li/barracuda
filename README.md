@@ -141,6 +141,8 @@ It will execute `iptables` when detecting ipv4, `ip6tables` when detecting ipv6 
 
 Executables are provided [here](https://u.ppom.me/reaction/releases/), for a standard x86-64 linux machine.
 
+A standard place to put such executables is `/usr/local/bin/`.
+
 ### Compilation
 
 You'll need the go toolchain for reaction and a c compiler for ip46tables.
