@@ -19,6 +19,16 @@ local banFor(time) = {
     },
   },
 
+  start: [
+    ['ip46tables', '-w', '-N', 'reaction'],
+    ['ip46tables', '-w', '-I', 'INPUT', '-p', 'all', '-j', 'reaction'],
+  ],
+  stop: [
+    ['ip46tables', '-w', '-D', 'INPUT', '-p', 'all', '-j', 'reaction'],
+    ['ip46tables', '-w', '-F', 'reaction'],
+    ['ip46tables', '-w', '-X', 'reaction'],
+  ],
+
   streams: {
     // Ban hosts failing to connect via ssh
     ssh: {

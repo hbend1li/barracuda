@@ -21,8 +21,7 @@ patterns:
 # Those commands will be executed in order at start, before everything else
 start:
   - [ 'ip46tables', '-w', '-N', 'reaction' ]
-  - [ 'ip46tables', '-w', '-A', 'reaction', '-j', 'ACCEPT' ]
-  - [ 'ip46tables', '-w', '-I', 'reaction', '1', '-s', '127.0.0.1', '-j', 'ACCEPT' ]
+  - [ 'ip46tables', '-w', '-A', 'reaction', '-j', 'RETURN' ]
   - [ 'ip46tables', '-w', '-I', 'INPUT', '-p', 'all', '-j', 'reaction' ]
 
 # Those commands will be executed in order at stop, after everything else
