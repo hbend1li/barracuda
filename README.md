@@ -16,7 +16,9 @@ and an always-running daemon should be implemented in a fast*er* language.
 
 reaction does not have all the features of the honorable fail2ban, but it's ~10x faster and has more manageable configuration.
 
-<a href="https://u.ppom.me/reaction.webm">📽️ french quick explanation 😉</a>
+<a href="https://u.ppom.me/reaction.webm">📽️ quick french name explanation 😉</a>
+
+<a href="https://blog.ppom.me/fr-reaction">french in-depth blog article</a>
 
 ## Configuration
 
