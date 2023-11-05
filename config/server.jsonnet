@@ -38,6 +38,7 @@ local banFor(time) = {
           regex: [
             @'authentication failure;.*rhost=<ip>',
             @'Connection reset by authenticating user .* <ip>',
+            @'Failed password for .* from <ip>',
           ],
           retry: 3,
           retryperiod: '6h',
