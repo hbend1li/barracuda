@@ -5,7 +5,7 @@
 
 // JSONNET functions
 local iptables(args) = ['ip46tables', '-w'] + args;
-// ip46tables is a minimal C program (only POSIX dependencies) present as a subdirectory.
+// ip46tables is a minimal C program (only POSIX dependencies) present in a subdirectory of this repo.
 // it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
 {
@@ -24,12 +24,6 @@ local iptables(args) = ['ip46tables', '-w'] + args;
   start: [
     // Create an iptables chain for reaction
     iptables(['-N', 'reaction']),
-    // Set its default to ACCEPT
-    iptables(['-A', 'reaction', '-j', 'ACCEPT']),
-    // Always accept 127.0.0.1
-    iptables(['-I', 'reaction', '1', '-s', '127.0.0.1', '-j', 'ACCEPT']),
-    // Always accept ::1
-    iptables(['-I', 'reaction', '1', '-s', '::1', '-j', 'ACCEPT']),
     // Insert this chain as the first item of the INPUT chain (for incoming connections)
     iptables(['-I', 'INPUT', '-p', 'all', '-j', 'reaction']),
   ],
@@ -85,7 +79,7 @@ local iptables(args) = ['ip46tables', '-w'] + args;
               // if you want reaction to run those pending commands before exiting, you can set this:
               onexit: true,
               // (defaults to false)
-              // here it is not useful because we will flush the chain containing the bans anyway
+              // here it is not useful because we will flush and delete the chain containing the bans anyway
               // (with the stop commands)
             },
           },
