@@ -164,7 +164,7 @@ $ gcc ip46tables.d/ip46tables.c -o ip46tables
 
 Provided binaries in the previous section are compiled this way:
 ```shell
-$ docker run -it --rm -v (pwd):/code -w /code golang:1.20-bullseye make
+$ docker run -it --rm -v (pwd):/code -w /code -e CGO_ENABLED=0 golang:1.20 make
 ```
 
 ### NixOS
