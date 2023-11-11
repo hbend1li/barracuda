@@ -1,5 +1,5 @@
 # vim: ft=systemd
-[Unit]
+[Install]
 WantedBy=multi-user.target
 
 # See `man systemd.exec` and `man systemd.service` for most options below
