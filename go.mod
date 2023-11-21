@@ -1,6 +1,6 @@
 module framagit.org/ppom/reaction
 
-go 1.19
+go 1.20
 
 require (
 	github.com/google/go-jsonnet v0.20.0
