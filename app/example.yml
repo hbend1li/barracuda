@@ -69,7 +69,7 @@ streams:
             after: 48h
             # let's say reaction is quitting. does it run all those pending commands which had an `after` duration set?
             # if you want reaction to run those pending commands before exiting, you can set this:
-            onexit: true
+            # onexit: true
             # (defaults to false)
             # here it is not useful because we will flush and delete the chain containing the bans anyway
             # (with the stop commands)
