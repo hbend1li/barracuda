@@ -149,7 +149,7 @@ A standard place to put such executables is `/usr/local/bin/`.
 
 ### Compilation
 
-You'll need the go toolchain for reaction and a c compiler for ip46tables.
+You'll need the go (>= 1.20) toolchain for reaction and a c compiler for ip46tables.
 ```shell
 $ make
 ```
