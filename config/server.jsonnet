@@ -32,7 +32,7 @@ local banFor(time) = {
   streams: {
     // Ban hosts failing to connect via ssh
     ssh: {
-      cmd: [' journalctl', '-fn0', '-u', 'sshd.service'],
+      cmd: ['journalctl', '-fn0', '-u', 'sshd.service'],
       filters: {
         failedlogin: {
           regex: [
