@@ -70,10 +70,10 @@ local iptables(args) = ['ip46tables', '-w'] + args;
           actions: {
             // actions have a user-defined name
             ban: {
-              cmd: iptables(['-A', 'reaction', '-s', '<ip>', '-j', 'reaction-log-refuse']),
+              cmd: iptables(['-A', 'reaction', '-s', '<ip>', '-j', 'DROP']),
             },
             unban: {
-              cmd: iptables(['-D', 'reaction', '-s', '<ip>', '-j', 'reaction-log-refuse']),
+              cmd: iptables(['-D', 'reaction', '-s', '<ip>', '-j', 'DROP']),
               // if after is defined, the action will not take place immediately, but after a specified duration
               // same format as retryperiod
               after: '48h',
