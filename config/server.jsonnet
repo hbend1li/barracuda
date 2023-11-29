@@ -2,11 +2,11 @@
 
 local banFor(time) = {
   ban: {
-    cmd: ['ip46tables', '-w', '-A', 'reaction', '-s', '<ip>', '-j', 'reaction-log-refuse'],
+    cmd: ['ip46tables', '-w', '-A', 'reaction', '-s', '<ip>', '-j', 'DROP'],
   },
   unban: {
     after: time,
-    cmd: ['ip46tables', '-w', '-D', 'reaction', '-s', '<ip>', '-j', 'reaction-log-refuse'],
+    cmd: ['ip46tables', '-w', '-D', 'reaction', '-s', '<ip>', '-j', 'DROP'],
   },
 };
 
