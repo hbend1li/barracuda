@@ -16,9 +16,10 @@ and an always-running daemon should be implemented in a fast*er* language.
 
 reaction does not have all the features of the honorable fail2ban, but it's ~10x faster and has more manageable configuration.
 
-<a href="https://u.ppom.me/reaction.webm">📽️ quick french name explanation 😉</a>
+[📽️ quick french name explanation 😉](https://u.ppom.me/reaction.webm)
 
-<a href="https://blog.ppom.me/fr-reaction">french in-depth blog article</a>
+[🇬🇧 in-depth blog article](https://blog.ppom.me/en-reaction)
+/ [🇫🇷 french version](https://blog.ppom.me/fr-reaction)
 
 ## Configuration
 
@@ -139,6 +140,10 @@ If you don't know where to start reaction, `/var/lib/reaction` should be a sane 
 It permits to configure `iptables` and `ip6tables` at the same time.
 It will execute `iptables` when detecting ipv4, `ip6tables` when detecting ipv6 and both if no ip address is present on the command line.
 
+## Wiki
+
+You'll find more ressources, service configurations, etc. on the [Wiki](https://framagit.org/ppom/reaction-wiki)!
+
 ## Installation
 
 ### Binaries
@@ -164,7 +169,7 @@ $ gcc ip46tables.d/ip46tables.c -o ip46tables
 
 Provided binaries in the previous section are compiled this way:
 ```shell
-$ docker run -it --rm -v (pwd):/code -w /code -e CGO_ENABLED=0 golang:1.20 make
+$ docker run -it --rm -v $(pwd):/code -w /code -e CGO_ENABLED=0 golang:1.20 make
 ```
 
 ### NixOS
