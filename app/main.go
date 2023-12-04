@@ -72,9 +72,7 @@ func basicUsage() {
 		bold  = "\033[1m"
 		reset = "\033[0m"
 	)
-	fmt.Print(`usage:
-
-` + bold + `reaction start` + reset + `
+	fmt.Print(bold + `reaction start` + reset + `
   # start the daemon
 
   # options:
@@ -107,6 +105,9 @@ func basicUsage() {
 
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
 cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
+
+see usage examples, service configurations and good practices
+on the ` + bold + `wiki` + reset + `: https://framagit.org/ppom/reaction-wiki
 `)
 }
 
