@@ -148,7 +148,7 @@ You'll find more ressources, service configurations, etc. on the [Wiki](https://
 
 ### Binaries
 
-Executables are provided [here](https://u.ppom.me/reaction/releases/), for a standard x86-64 linux machine.
+Executables are provided [here](https://framagit.org/ppom/reaction/-/releases/), for a standard x86-64 linux machine.
 
 A standard place to put such executables is `/usr/local/bin/`.
 
