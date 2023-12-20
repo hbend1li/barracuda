@@ -14,7 +14,7 @@ reaction.deb: reaction ip46tables
 	mkdir -p deb/reaction/usr/bin/ deb/reaction/usr/sbin/ deb/reaction/lib/systemd/system/
 	cp reaction deb/reaction/usr/bin/
 	cp ip46tables deb/reaction/usr/sbin/
-	cp reaction.service deb/reaction/lib/systemd/system/
+	cp config/reaction.debian.service deb/reaction/lib/systemd/system/reaction.service
 	cp -r DEBIAN/ deb/reaction/DEBIAN
 	sed -e "s/LAST_TAG/`git tag --sort=v:refname | tail -n1`/" -e "s/Version: v/Version: /" -i deb/reaction/DEBIAN/*
 	cd deb && dpkg-deb --root-owner-group --build reaction

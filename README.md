@@ -28,7 +28,7 @@ both are extensions of JSON, so JSON is transitively supported.
 
 - See [reaction.yml](./app/example.yml) or [reaction.jsonnet](./config/example.jsonnet) for a fully explained reference
 - See [server.jsonnet](./config/server.jsonnet) for a real-world configuration
-- See [reaction.service](./config/reaction.service) for a systemd service file
+- See [reaction.example.service](./config/reaction.example.service) for a systemd service file
 - This quick example shows what's needed to prevent brute force attacks on an ssh server:
 
 <details open>
@@ -152,6 +152,21 @@ Executables are provided [here](https://framagit.org/ppom/reaction/-/releases/),
 
 A standard place to put such executables is `/usr/local/bin/`.
 
+#### Debian
+
+The releases also contain a `reaction.deb` file, which packages reaction & ip46tables.
+You can install it using `sudo apt install ./reaction.deb`.
+You'll have to create a configuration at `/etc/reaction.jsonnet`.
+
+If you want to use another configuration format (YAML or JSON), you can override systemd's `ExecStart` command in `/etc/systemd/system/reaction.service` like this:
+```systemd
+[Service]
+# First an empty directive to reset the default one
+ExecStart=
+# Then put what you want
+ExecStart=/usr/bin/reaction start -c /etc/reaction.yml
+```
+
 ### Compilation
 
 You'll need the go (>= 1.20) toolchain for reaction and a c compiler for ip46tables.
@@ -169,7 +184,7 @@ $ gcc ip46tables.d/ip46tables.c -o ip46tables
 
 Provided binaries in the previous section are compiled this way:
 ```shell
-$ docker run -it --rm -v $(pwd):/code -w /code -e CGO_ENABLED=0 golang:1.20 make
+$ docker run -it --rm -e HOME=/tmp/ -v $(pwd):/tmp/code -w /tmp/code -u $(id -u) golang:1.20 make clean reaction.deb
 ```
 
 ### NixOS

@@ -3,7 +3,7 @@ Description=A daemon that scans program outputs for repeated patterns, and takes
 Documentation=https://framagit.org/ppom/reaction-wiki
 
 [Service]
-ExecStart=/usr/bin/reaction start -c /etc/reaction.yml
+ExecStart=/usr/bin/reaction start -c /etc/reaction.jsonnet
 StateDirectory=reaction
 RuntimeDirectory=reaction
 WorkingDirectory=/var/lib/reaction
