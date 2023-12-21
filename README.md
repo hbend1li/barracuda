@@ -97,9 +97,9 @@ local banFor(time) = {
     iptables([ '-I', 'INPUT', '-p', 'all', '-j', 'reaction' ]),
   ],
   stop: [
-    iptables([ '-D,', 'INPUT', '-p', 'all', '-j', 'reaction' ]),
-    iptables([ '-F,', 'reaction' ]),
-    iptables([ '-X,', 'reaction' ]),
+    iptables([ '-D', 'INPUT', '-p', 'all', '-j', 'reaction' ]),
+    iptables([ '-F', 'reaction' ]),
+    iptables([ '-X', 'reaction' ]),
   ],
   streams: {
     ssh: {

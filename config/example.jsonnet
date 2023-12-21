@@ -32,11 +32,11 @@ local iptables(args) = ['ip46tables', '-w'] + args;
   // Those commands will be executed in order at stop, after everything else
   stop: [
     // Remove the chain from the INPUT chain
-    iptables(['-D,', 'INPUT', '-p', 'all', '-j', 'reaction']),
+    iptables(['-D', 'INPUT', '-p', 'all', '-j', 'reaction']),
     // Empty the chain
-    iptables(['-F,', 'reaction']),
+    iptables(['-F', 'reaction']),
     // Delete the chain
-    iptables(['-X,', 'reaction']),
+    iptables(['-X', 'reaction']),
   ],
 
   // streams are commands
