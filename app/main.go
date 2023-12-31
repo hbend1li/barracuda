@@ -72,7 +72,11 @@ func basicUsage() {
 		bold  = "\033[1m"
 		reset = "\033[0m"
 	)
-	fmt.Print(bold + `reaction start` + reset + `
+	fmt.Print(
+		bold + `reaction help` + reset + `
+  # print this help message
+
+` + bold + `reaction start` + reset + `
   # start the daemon
 
   # options:
@@ -106,6 +110,9 @@ func basicUsage() {
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
 cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
 
+` + bold + `reaction version` + reset + `
+  # print version information
+
 see usage examples, service configurations and good practices
 on the ` + bold + `wiki` + reset + `: https://framagit.org/ppom/reaction-wiki
 `)
@@ -114,7 +121,7 @@ on the ` + bold + `wiki` + reset + `: https://framagit.org/ppom/reaction-wiki
 //go:embed example.yml
 var exampleConf string
 
-func Main() {
+func Main(version, commit string) {
 	if len(os.Args) <= 1 {
 		logger.Fatalln("No argument provided. Try `reaction help`")
 		basicUsage()
@@ -124,6 +131,9 @@ func Main() {
 	switch os.Args[1] {
 	case "help", "-h", "-help", "--help":
 		basicUsage()
+
+	case "version", "-v", "--version":
+		fmt.Printf("reaction version %v commit %v\n", commit, version)
 
 	case "example-conf":
 		subCommandParse(f, 0)
