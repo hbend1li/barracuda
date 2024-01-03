@@ -100,8 +100,9 @@ func basicUsage() {
     -p/--pattern PATTERN             # only show items matching the PATTERN regex
 
 ` + bold + `reaction flush` + reset + ` TARGET
-  # run currently active matches and pending actions for the specified TARGET
+  # remove currently active matches and run currently pending actions for the specified TARGET
   # (then show flushed matches and actions)
+  # e.g. reaction flush 192.168.1.1
 
   # options:
     -s/--socket SOCKET               # path to the client-daemon communication socket
