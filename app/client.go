@@ -89,6 +89,24 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 	}
+
+	// Remove empty structs
+	for streamName := range response.ClientStatus {
+		for filterName := range response.ClientStatus[streamName] {
+			for patternName, patternMap := range response.ClientStatus[streamName][filterName] {
+				if len(patternMap.Actions) == 0 && patternMap.Matches == 0 {
+					delete(response.ClientStatus[streamName][filterName], patternName)
+				}
+			}
+			if len(response.ClientStatus[streamName][filterName]) == 0 {
+				delete(response.ClientStatus[streamName], filterName)
+			}
+		}
+		if len(response.ClientStatus[streamName]) == 0 {
+			delete(response.ClientStatus, streamName)
+		}
+	}
+
 	// Limit to stream, filter if exists
 	if stream != "" {
 		exists := false
@@ -114,6 +132,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 			os.Exit(1)
 		}
 	}
+
 	// Limit to pattern
 	if regex != nil {
 		for streamName := range response.ClientStatus {
@@ -132,6 +151,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 			}
 		}
 	}
+
 	var text []byte
 	var err error
 	if format == "json" {
