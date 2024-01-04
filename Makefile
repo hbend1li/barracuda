@@ -1,7 +1,7 @@
 all: reaction ip46tables
 
 clean:
-	rm -f reaction ip46tables reaction.deb
+	rm -f reaction ip46tables reaction.deb deb
 
 ip46tables: ip46tables.d/ip46tables.c
 	gcc -static ip46tables.d/ip46tables.c -o ip46tables
