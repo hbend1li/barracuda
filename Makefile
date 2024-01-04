@@ -1,7 +1,7 @@
 all: reaction ip46tables
 
 clean:
-	rm -f reaction ip46tables reaction.deb deb
+	rm -f reaction ip46tables reaction.deb deb reaction.minisig ip46tables.minisig reaction.deb.minisig
 
 ip46tables: ip46tables.d/ip46tables.c
 	gcc -static ip46tables.d/ip46tables.c -o ip46tables
@@ -20,3 +20,7 @@ reaction.deb: reaction ip46tables
 	cd deb && dpkg-deb --root-owner-group --build reaction
 	mv deb/reaction.deb reaction.deb
 	rm -rf deb/
+
+signatures: reaction.deb reaction ip46tables
+	minisign -Sm ip46tables reaction reaction.deb
+
