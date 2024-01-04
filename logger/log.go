@@ -76,6 +76,5 @@ func Fatalln(args ...any) {
 }
 
 func Fatalf(format string, args ...any) {
-	level := FATAL
-	log.Fatalf(level.String()+format, args)
+	log.Fatalf(FATAL.String()+format, args)
 }

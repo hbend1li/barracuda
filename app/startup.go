@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -26,7 +27,7 @@ func (c *Conf) setup() {
 
 		compiled, err := regexp.Compile(fmt.Sprintf("^%v$", pattern.Regex))
 		if err != nil {
-			logger.Fatalf("Bad configuration: pattern %v doesn't compile!", patternName)
+			logger.Fatalf("Bad configuration: pattern %v: %v", patternName, err)
 		}
 		c.Patterns[patternName].Regex = fmt.Sprintf("(?P<%s>%s)", patternName, pattern.Regex)
 		for _, ignore := range pattern.Ignore {
@@ -97,8 +98,11 @@ func (c *Conf) setup() {
 						regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 					}
 				}
-				// TODO regexp.Compile and show proper message if it doesn't instead of panicing
-				filter.compiledRegex = append(filter.compiledRegex, *regexp.MustCompile(regex))
+				compiledRegex, err := regexp.Compile(regex)
+				if err != nil {
+					log.Fatalf("%vBad configuration: regex of filter %s.%s: %v", logger.FATAL, stream.name, filter.name, err)
+				}
+				filter.compiledRegex = append(filter.compiledRegex, *compiledRegex)
 			}
 
 			if len(filter.Actions) == 0 {
