@@ -94,26 +94,52 @@ func (f *Filter) sendActions(match string, at time.Time) {
 }
 
 func (a *Action) exec(match string) {
-	wgActions.Add(1)
-	go func() {
-		defer wgActions.Done()
+	defer wgActions.Done()
 
-		computedCommand := make([]string, 0, len(a.Cmd))
-		for _, item := range a.Cmd {
-			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
-		}
+	computedCommand := make([]string, 0, len(a.Cmd))
+	for _, item := range a.Cmd {
+		computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
+	}
 
-		logger.Printf(logger.INFO, "%s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
+	logger.Printf(logger.INFO, "%s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
 
-		cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
+	cmd := exec.Command(computedCommand[0], computedCommand[1:]...)
 
-		if ret := cmd.Run(); ret != nil {
-			logger.Printf(logger.ERROR, "%s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
-		}
-	}()
+	if ret := cmd.Run(); ret != nil {
+		logger.Printf(logger.ERROR, "%s.%s.%s: run %s, code %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand, ret)
+	}
 }
 
-func ActionsManager() {
+func ActionsManager(concurrency int) {
+	// concurrency init
+	execActionsC := make(chan PA)
+	if concurrency > 0 {
+		for i := 0; i < concurrency; i++ {
+			go func() {
+				var pa PA
+				for {
+					pa = <-execActionsC
+					pa.a.exec(pa.p)
+				}
+			}()
+		}
+	} else {
+		go func() {
+			var pa PA
+			for {
+				pa = <-execActionsC
+				go func(pa PA) {
+					pa.a.exec(pa.p)
+				}(pa)
+			}
+		}()
+	}
+	execAction := func(a *Action, p string) {
+		wgActions.Add(1)
+		execActionsC <- PA{p, a}
+	}
+
+	// main
 	pendingActionsC := make(chan PAT)
 	for {
 		select {
@@ -123,13 +149,13 @@ func ActionsManager() {
 			now := time.Now()
 			// check if must be executed now
 			if then.Compare(now) <= 0 {
-				action.exec(pattern)
+				execAction(action, pattern)
 			} else {
 				actionsLock.Lock()
 				if actions[pa] == nil {
 					actions[pa] = make(map[time.Time]struct{})
 				}
-				actions[PA{pattern, action}][then] = struct{}{}
+				actions[pa][then] = struct{}{}
 				actionsLock.Unlock()
 				go func(insidePat PAT, insideNow time.Time) {
 					time.Sleep(insidePat.t.Sub(insideNow))
@@ -141,20 +167,17 @@ func ActionsManager() {
 			pattern, action, then := pat.p, pat.a, pat.t
 			actionsLock.Lock()
 			if actions[pa] != nil {
-				if _, ok := actions[pa][then]; ok {
-					delete(actions[pa], then)
-					action.exec(pattern)
-				}
+				delete(actions[pa], then)
 			}
 			actionsLock.Unlock()
-			action.exec(pattern)
+			execAction(action, pattern)
 		case fo := <-flushToActionsC:
 			ret := make(ActionsMap)
 			actionsLock.Lock()
 			for pa := range actions {
 				if pa.p == fo.p {
 					for range actions[pa] {
-						pa.a.exec(pa.p)
+						execAction(pa.a, pa.p)
 					}
 					ret[pa] = actions[pa]
 					delete(actions, pa)
@@ -164,9 +187,11 @@ func ActionsManager() {
 			fo.ret <- ret
 		case _, _ = <-stopActions:
 			actionsLock.Lock()
-			for pat := range actions {
-				if pat.a.OnExit {
-					pat.a.exec(pat.p)
+			for pa := range actions {
+				if pa.a.OnExit {
+					for range actions[pa] {
+						execAction(pa.a, pa.p)
+					}
 				}
 			}
 			actionsLock.Unlock()
@@ -349,7 +374,7 @@ func Daemon(confFilename string) {
 
 	go DatabaseManager(conf)
 	go MatchesManager()
-	go ActionsManager()
+	go ActionsManager(conf.Concurrency)
 
 	// Ready to start
 

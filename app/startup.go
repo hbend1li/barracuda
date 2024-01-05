@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -15,6 +16,9 @@ import (
 )
 
 func (c *Conf) setup() {
+	if c.Concurrency == 0 {
+		c.Concurrency = runtime.NumCPU()
+	}
 
 	for patternName := range c.Patterns {
 		pattern := c.Patterns[patternName]
@@ -144,13 +148,11 @@ func parseConf(filename string) *Conf {
 
 	var conf Conf
 	if filename[len(filename)-4:] == ".yml" || filename[len(filename)-5:] == ".yaml" {
-		logger.Println(logger.DEBUG, "yaml")
 		err = jsonnet.NewYAMLToJSONDecoder(data).Decode(&conf)
 		if err != nil {
 			logger.Fatalln("Failed to parse yaml configuration file:", err)
 		}
 	} else {
-		logger.Println(logger.DEBUG, "json")
 		var jsondata string
 		jsondata, err = jsonnet.MakeVM().EvaluateFile(filename)
 		if err == nil {

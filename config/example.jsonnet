@@ -21,6 +21,11 @@ local iptables(args) = ['ip46tables', '-w'] + args;
     },
   },
 
+  // if set to a positive number → max number of concurrent actions
+  // if set to a negative number → no limit
+  // if not specified or set to 0 → defaults to the number of CPUs on the system
+  concurrency: 0,
+
   // Those commands will be executed in order at start, before everything else
   start: [
     // Create an iptables chain for reaction

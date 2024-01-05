@@ -7,6 +7,8 @@ patterns:
     ignore:
       - 1.0.0.1
 
+concurrency: 0
+
 streams:
   tailDown1:
     cmd: [ 'sh', '-c', 'sleep 2; seq 100010 | while read i; do echo found $(($i % 100)); done' ]
@@ -18,9 +20,9 @@ streams:
         retryperiod: 1m
         actions:
           damn:
-            cmd: [ 'echo', '<num>' ]
+            cmd: [ 'sleep', '0.<num>' ]
           undamn:
-            cmd: [ 'echo', 'undamn', '<num>' ]
+            cmd: [ 'sleep', '0.<num>' ]
             after: 1m
             onexit: false
   tailDown2:
@@ -33,9 +35,9 @@ streams:
         retryperiod: 1m
         actions:
           damn:
-            cmd: [ 'echo', '<num>' ]
+            cmd: [ 'sleep', '0.<num>' ]
           undamn:
-            cmd: [ 'echo', 'undamn', '<num>' ]
+            cmd: [ 'sleep', '0.<num>' ]
             after: 1m
             onexit: false
   tailDown3:
@@ -48,9 +50,9 @@ streams:
         retryperiod: 2m
         actions:
           damn:
-            cmd: [ 'true' ]
+            cmd: [ 'sleep', '0.<num>' ]
           undamn:
-            cmd: [ 'true' ]
+            cmd: [ 'sleep', '0.<num>' ]
             after: 1m
             onexit: false
   tailDown4:
@@ -63,8 +65,8 @@ streams:
         retryperiod: 2m
         actions:
           damn:
-            cmd: [ 'echo', '<num>' ]
+            cmd: [ 'sleep', '0.<num>' ]
           undamn:
-            cmd: [ 'echo', 'undamn', '<num>' ]
+            cmd: [ 'sleep', '0.<num>' ]
             after: 1m
             onexit: false

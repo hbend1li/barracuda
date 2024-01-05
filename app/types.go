@@ -8,10 +8,11 @@ import (
 )
 
 type Conf struct {
-	Patterns map[string]*Pattern `json:"patterns"`
-	Streams  map[string]*Stream  `json:"streams"`
-	Start    [][]string          `json:"start"`
-	Stop     [][]string          `json:"stop"`
+	Concurrency int                 `json:"concurrency"`
+	Patterns    map[string]*Pattern `json:"patterns"`
+	Streams     map[string]*Stream  `json:"streams"`
+	Start       [][]string          `json:"start"`
+	Stop        [][]string          `json:"stop"`
 }
 
 type Pattern struct {
