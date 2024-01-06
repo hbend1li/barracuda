@@ -1,3 +1,6 @@
+PREFIX ?= /usr/local
+BINDIR = $(PREFIX)/bin
+
 all: reaction ip46tables
 
 clean:
@@ -24,3 +27,6 @@ reaction.deb: reaction ip46tables
 signatures: reaction.deb reaction ip46tables
 	minisign -Sm ip46tables reaction reaction.deb
 
+install: all
+	@install -m755 reaction $(DESTDIR)$(BINDIR)
+	@install -m755 ip46tables $(DESTDIR)$(BINDIR)
