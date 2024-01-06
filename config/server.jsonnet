@@ -16,6 +16,7 @@ local banFor(time) = {
     // ip46tables (C program also in this repo) handles running the good commands
     ip: {
       regex: @'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}|(?:(?:[0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(?:ffff(?::0{1,4}){0,1}:){0,1}(?:(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9]))',
+      ignore: std.makeArray(255, function(i) "192.168.1."+i),
     },
   },
 
@@ -37,7 +38,7 @@ local banFor(time) = {
         failedlogin: {
           regex: [
             @'authentication failure;.*rhost=<ip>',
-            @'Connection reset by authenticating user .* <ip>',
+            @'Connection (reset|closed) by (authenticating|invalid) user .* <ip>',
             @'Failed password for .* from <ip>',
           ],
           retry: 3,
@@ -115,7 +116,7 @@ local banFor(time) = {
         // Ban hosts presenting themselves as bots of ChatGPT
         gptbot: {
           regex: [@'^<ip>.*GPTBot/1.0'],
-          action: banFor('720h'),
+          actions: banFor('720h'),
         },
 
         // Ban hosts failing to connect to slskd
@@ -150,7 +151,7 @@ local banFor(time) = {
             // Do not include this if a client must retrieve a config.json file ;)
             @'^<ip>.*"GET /(?:[^/" ]*/)*config\.json ',
           ],
-          action: banFor('720h'),
+          actions: banFor('720h'),
         },
       },
     },
