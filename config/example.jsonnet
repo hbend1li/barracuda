@@ -64,7 +64,7 @@ local iptables(args) = ['ip46tables', '-w'] + args;
             // ip's regex is inserted in the following regex
             @'authentication failure;.*rhost=<ip>',
             @'Failed password for .* from <ip>',
-            @'Connection reset by authenticating user .* <ip>',
+            @'Connection (reset|closed) by (authenticating|invalid) user .* <ip>',
           ],
           // if retry and retryperiod are defined,
           // the actions will only take place if a same pattern is
