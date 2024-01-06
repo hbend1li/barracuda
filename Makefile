@@ -1,3 +1,4 @@
+CC ?= gcc
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 
@@ -7,7 +8,7 @@ clean:
 	rm -f reaction ip46tables reaction.deb deb reaction.minisig ip46tables.minisig reaction.deb.minisig
 
 ip46tables: ip46tables.d/ip46tables.c
-	gcc -s -static ip46tables.d/ip46tables.c -o ip46tables
+	$(CC) -s -static ip46tables.d/ip46tables.c -o ip46tables
 
 reaction: app/* reaction.go go.mod go.sum
 	CGO_ENABLED=0 go build -buildvcs=false -ldflags "-s -X main.version=`git tag --sort=v:refname | tail -n1` -X main.commit=`git rev-parse --short HEAD`"
