@@ -146,6 +146,8 @@ You'll find more ressources, service configurations, etc. on the [Wiki](https://
 
 ## Installation
 
+[![Packaging status](https://repology.org/badge/vertical-allrepos/reaction-fail2ban.svg)](https://repology.org/project/reaction-fail2ban/versions)
+
 ### Binaries
 
 Executables are provided [here](https://framagit.org/ppom/reaction/-/releases/), for a standard x86-64 linux machine.
