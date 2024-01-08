@@ -8,6 +8,17 @@ local iptables(args) = ['ip46tables', '-w'] + args;
 // ip46tables is a minimal C program (only POSIX dependencies) present in a subdirectory of this repo.
 // it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
+// See meaning and usage of this function around L106
+local banFor(time) = {
+  ban: {
+    cmd: iptables(['-A', 'reaction', '-s', '<ip>', '-j', 'DROP']),
+  },
+  unban: {
+    after: time,
+    cmd: iptables(['-D', 'reaction', '-s', '<ip>', '-j', 'DROP']),
+  },
+};
+
 {
   // patterns are substitued in regexes.
   // when a filter performs an action, it replaces the found pattern
@@ -91,6 +102,8 @@ local iptables(args) = ['ip46tables', '-w'] + args;
               // (with the stop commands)
             },
           },
+          // or use the banFor function defined at the beginning!
+          // actions: banFor('48h'),
         },
       },
     },
