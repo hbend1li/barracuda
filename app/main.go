@@ -134,7 +134,7 @@ func Main(version, commit string) {
 		basicUsage()
 
 	case "version", "-v", "--version":
-		fmt.Printf("reaction version %v commit %v\n", commit, version)
+		fmt.Printf("reaction version %v commit %v\n", version, commit)
 
 	case "example-conf":
 		subCommandParse(f, 0)
