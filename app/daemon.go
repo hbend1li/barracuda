@@ -76,11 +76,17 @@ func (f *Filter) match(line *string) string {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
 
-			match := matches[regex.SubexpIndex(f.pattern.name)]
+			if f.pattern != nil {
+				match := matches[regex.SubexpIndex(f.pattern.name)]
 
-			if f.pattern.notAnIgnore(&match) {
-				logger.Printf(logger.INFO, "%s.%s: match [%v]\n", f.stream.name, f.name, match)
-				return match
+				if f.pattern.notAnIgnore(&match) {
+					logger.Printf(logger.INFO, "%s.%s: match [%v]\n", f.stream.name, f.name, match)
+					return match
+				}
+			} else {
+				logger.Printf(logger.INFO, "%s.%s: match [.]\n", f.stream.name, f.name)
+				// No pattern, so this match will never actually be used
+				return "."
 			}
 		}
 	}
@@ -96,9 +102,16 @@ func (f *Filter) sendActions(match string, at time.Time) {
 func (a *Action) exec(match string) {
 	defer wgActions.Done()
 
-	computedCommand := make([]string, 0, len(a.Cmd))
-	for _, item := range a.Cmd {
-		computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
+	var computedCommand []string
+
+	if a.filter.pattern != nil {
+		computedCommand := make([]string, 0, len(a.Cmd))
+
+		for _, item := range a.Cmd {
+			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
+		}
+	} else {
+		computedCommand = a.Cmd
 	}
 
 	logger.Printf(logger.INFO, "%s.%s.%s: run %s\n", a.filter.stream.name, a.filter.name, a.name, computedCommand)
