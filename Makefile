@@ -1,6 +1,7 @@
 CC ?= gcc
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
+SYSTEMDDIR ?= /etc/systemd
 
 all: reaction ip46tables
 
@@ -31,3 +32,6 @@ signatures: reaction.deb reaction ip46tables
 install: all
 	@install -m755 reaction $(DESTDIR)$(BINDIR)
 	@install -m755 ip46tables $(DESTDIR)$(BINDIR)
+
+install_systemd: install
+	@install -m644 config/reaction.debian.service $(SYSTEMDDIR)/system/reaction.service
