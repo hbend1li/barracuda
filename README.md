@@ -154,6 +154,11 @@ Executables are provided [here](https://framagit.org/ppom/reaction/-/releases/),
 
 A standard place to put such executables is `/usr/local/bin/`.
 
+> Provided binaries in the previous section are compiled this way:
+```shell
+$ docker run -it --rm -e HOME=/tmp/ -v $(pwd):/tmp/code -w /tmp/code -u $(id -u) golang:1.20 make clean reaction.deb
+$ make signaturese
+```
 #### Signature verification
 
 Starting at v1.0.3, all binaries are signed with public key `RWSpLTPfbvllNqRrXUgZzM7mFjLUA7PQioAItz80ag8uU4A2wtoT2DzX`. You can check their authenticity with minisign:
@@ -179,27 +184,27 @@ ExecStart=
 ExecStart=/usr/bin/reaction start -c /etc/reaction.yml
 ```
 
+#### NixOS
+
+- [ package ](https://framagit.org/ppom/nixos/-/blob/main/pkgs/reaction/default.nix)
+- [ module ](https://framagit.org/ppom/nixos/-/blob/main/modules/common/reaction.nix)
+
 ### Compilation
 
 You'll need the go (>= 1.20) toolchain for reaction and a c compiler for ip46tables.
 ```shell
 $ make
 ```
+Don't hesitate to take a look at the `Makefile` to understand what's happening!
 
-Alternatively,
+### Installation
+
+To install the binaries
 ```shell
-# creates ./reaction
-$ go build .
-# creates ./ip46tables
-$ gcc ip46tables.d/ip46tables.c -o ip46tables
+make install
 ```
 
-Provided binaries in the previous section are compiled this way:
+To install the systemd file as well
 ```shell
-$ docker run -it --rm -e HOME=/tmp/ -v $(pwd):/tmp/code -w /tmp/code -u $(id -u) golang:1.20 make clean reaction.deb
+make install_systemd
 ```
-
-### NixOS
-
-- [ package ](https://framagit.org/ppom/nixos/-/blob/main/pkgs/reaction/default.nix)
-- [ module ](https://framagit.org/ppom/nixos/-/blob/main/modules/common/reaction.nix)

@@ -30,8 +30,9 @@ signatures: reaction.deb reaction ip46tables
 	minisign -Sm ip46tables reaction reaction.deb
 
 install: all
-	@install -m755 reaction $(DESTDIR)$(BINDIR)
-	@install -m755 ip46tables $(DESTDIR)$(BINDIR)
+	install -m755 reaction $(DESTDIR)$(BINDIR)
+	install -m755 ip46tables $(DESTDIR)$(BINDIR)
 
 install_systemd: install
-	@install -m644 config/reaction.debian.service $(SYSTEMDDIR)/system/reaction.service
+	install -m644 config/reaction.debian.service $(SYSTEMDDIR)/system/reaction.service
+	sed -i 's#/usr/bin#$(DESTDIR)$(BINDIR)#' $(SYSTEMDDIR)/system/reaction.service
