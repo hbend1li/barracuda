@@ -105,7 +105,7 @@ func (a *Action) exec(match string) {
 	var computedCommand []string
 
 	if a.filter.pattern != nil {
-		computedCommand := make([]string, 0, len(a.Cmd))
+		computedCommand = make([]string, 0, len(a.Cmd))
 
 		for _, item := range a.Cmd {
 			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
