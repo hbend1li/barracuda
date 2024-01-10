@@ -23,8 +23,6 @@ DATA='{
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction.deb.minisig", "name": "reaction.deb.minisig", "link_type": "other"}
 ]}}'
 
-DATA="$(echo "$DATA" | tr '\n' ' ')"
-
 curl \
 	--fail-with-body \
 	--location \
