@@ -1,0 +1,38 @@
+---
+image: debian:bookworm
+stages:
+  - deb
+
+variables:
+  DEBIAN_FRONTEND: noninteractive  
+  DEBFULLNAME: Ppom
+  DEBEMAIL: reaction@ppom.me
+
+make_deb:
+  stage: deb
+  before_script:
+    - echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/backports.list
+    - apt-get -qq -y update
+    - apt-get -qq -y install build-essential devscripts debhelper quilt wget
+    - apt-get -qq -y install golang-go -t bookworm-backports
+  script:
+    - mkdir debian-packaging public
+    - cd debian-packaging
+    - wget "https://framagit.org/ppom/reaction/-/archive/${CI_COMMIT_TAG}/reaction-${CI_COMMIT_TAG}.tar.gz" -O "reaction_${CI_COMMIT_TAG:1}.orig.tar.gz"
+    - tar xf "reaction_${CI_COMMIT_TAG:1}.orig.tar.gz"
+    - cp -r ../debian "reaction-${CI_COMMIT_TAG}"
+    - cd "reaction-${CI_COMMIT_TAG}"
+    - if [[ -e debian/changelog ]]; then
+          dch --package reaction --newversion "${CI_COMMIT_TAG:1}-1" "New upstream release.";
+      else
+          dch --create --package reaction --newversion "${CI_COMMIT_TAG:1}-1" "Initial release.";
+      fi
+    - dch --release --distribution stable --urgency low ""
+    - debuild -us -uc
+    - cp debian/changelog "../reaction_${CI_COMMIT_TAG:1}-1_amd64.deb" ../../public
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - public
+  only:
+    - tags

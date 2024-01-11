@@ -1,0 +1,21 @@
+Source: reaction
+Maintainer: Luc Didry <luc.reaction@didry.org>
+Section: misc
+Priority: optional
+Standards-Version: 4.6.2
+Build-Depends: debhelper-compat (= 13), golang-go (>= 2:1.21~)
+
+Package: reaction
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: daemon that scans program outputs for patterns, and takes action
+ A common use of reaction is to scan ssh and web server logs,
+ and ban hosts that cause multiple authentication errors.
+ reaction doesn't have all the features of the honorable fail2ban,
+ but it's ~10x faster and easier to configure.
+Tag: admin::automation, admin::logging, admin::monitoring,
+ interface::commandline, interface::daemon,
+ network::firewall, protocol::ip, role::program,
+ security::authentication, security::firewall, security::ids,
+ security::log-analyzer, use::login, use::monitor,
+ works-with-format::plaintext, works-with::logfile, works-with::text

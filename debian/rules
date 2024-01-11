@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -m755 reaction $$(pwd)/debian/reaction/usr/bin
+	install -m755 ip46tables $$(pwd)/debian/reaction/usr/sbin

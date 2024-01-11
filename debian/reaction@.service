@@ -1,0 +1,12 @@
+[Unit]
+Description=A daemon that scans program outputs for repeated patterns, and takes action.
+Documentation=https://framagit.org/ppom/reaction-wiki
+
+[Service]
+ExecStart=/usr/bin/reaction start -c /etc/%i
+StateDirectory=reaction
+RuntimeDirectory=reaction
+WorkingDirectory=/var/lib/reaction
+
+[Install]
+WantedBy=multi-user.target
