@@ -9,3 +9,5 @@
 *.deb
 *.minisig
 *.qcow2
+debian-packaging/*
+*.swp

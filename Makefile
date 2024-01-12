@@ -6,7 +6,7 @@ SYSTEMDDIR ?= /etc/systemd
 all: reaction ip46tables nft46
 
 clean:
-	rm -f reaction ip46tables nft46 reaction.deb deb reaction.minisig ip46tables.minisig reaction.deb.minisig nft46.minisig
+	rm -f reaction ip46tables nft46 reaction*.deb debian-packaging reaction.minisig ip46tables.minisig nft46.minisig reaction*.deb.minisig
 
 ip46tables: helpers_c/ip46tables.c
 	$(CC) -s -static helpers_c/ip46tables.c -o ip46tables
@@ -17,19 +17,28 @@ nft46: helpers_c/nft46.c
 reaction: app/* reaction.go go.mod go.sum
 	CGO_ENABLED=0 go build -buildvcs=false -ldflags "-s -X main.version=`git tag --sort=v:refname | tail -n1` -X main.commit=`git rev-parse --short HEAD`"
 
-reaction.deb: reaction ip46tables nft46
-	chmod +x reaction ip46tables nft46
-	mkdir -p deb/reaction/usr/bin/ deb/reaction/usr/sbin/ deb/reaction/lib/systemd/system/
-	cp reaction ip46tables nft46 deb/reaction/usr/bin/
-	cp config/reaction.debian.service deb/reaction/lib/systemd/system/reaction.service
-	cp -r DEBIAN/ deb/reaction/DEBIAN
-	sed -e "s/LAST_TAG/`git tag --sort=v:refname | tail -n1`/" -e "s/Version: v/Version: /" -i deb/reaction/DEBIAN/*
-	cd deb && dpkg-deb --root-owner-group --build reaction
-	mv deb/reaction.deb reaction.deb
-	rm -rf deb/
+reaction_%-1_amd64.deb:
+	apt-get -qq -y update
+	apt-get -qq -y install build-essential devscripts debhelper quilt wget
+	if [ -e debian-packaging ]; then rm -rf debian-packaging; fi
+	mkdir debian-packaging
+	wget "https://framagit.org/ppom/reaction/-/archive/v${*}/reaction-v${*}.tar.gz" -O "debian-packaging/reaction_${*}.orig.tar.gz"
+	cd debian-packaging && tar xf "reaction_${*}.orig.tar.gz"
+	cp -r debian "debian-packaging/reaction-v${*}"
+	if [ -e "debian/changelog" ]; then \
+        cd "debian-packaging/reaction-v${*}" && \
+        DEBFULLNAME=Ppom DEBEMAIL=reaction@ppom.me dch --package reaction --newversion "${*}-1" "New upstream release."; \
+    else \
+        cd "debian-packaging/reaction-v${*}" && \
+        DEBFULLNAME=Ppom DEBEMAIL=reaction@ppom.me dch --create --package reaction --newversion "${*}-1" "Initial release."; \
+    fi
+	cd "debian-packaging/reaction-v${*}" && DEBFULLNAME=Ppom DEBEMAIL=reaction@ppom.me dch --release --distribution stable --urgency low ""
+	cd "debian-packaging/reaction-v${*}" && debuild --prepend-path=/go/bin:/usr/local/go/bin -us -uc
+	cp "debian-packaging/reaction-v${*}/debian/changelog" debian/
+	cp "debian-packaging/reaction_${*}-1_amd64.deb" .
 
-signatures: reaction.deb reaction ip46tables nft46
-	minisign -Sm ip46tables nft46 reaction reaction.deb
+signatures_%: reaction_%-1_amd64.deb reaction ip46tables nft46
+	minisign -Sm nft46 ip46tables reaction reaction_${*}-1_amd64.deb
 
 install: all
 	install -m755 reaction $(DESTDIR)$(BINDIR)

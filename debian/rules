@@ -4,4 +4,5 @@
 
 override_dh_auto_install:
 	install -m755 reaction $$(pwd)/debian/reaction/usr/bin
+	install -m755 nft46 $$(pwd)/debian/reaction/usr/sbin
 	install -m755 ip46tables $$(pwd)/debian/reaction/usr/sbin

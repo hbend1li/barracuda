@@ -4,13 +4,13 @@ set -exu
 
 git push --tags
 
-docker run -it --rm -e HOME=/tmp/ -v "$(pwd)":/tmp/code -w /tmp/code -u "$(id -u)" golang:1.20 make reaction.deb
-
-make signatures
-
 TAG="$(git tag --sort=v:refname | tail -n1)"
 
-rsync -avz -e 'ssh -J pica01' ./ip46tables ./nft46 ./reaction ./reaction.deb ./nft46.minisig ./ip46tables.minisig ./reaction.minisig ./reaction.deb.minisig akesi:/var/www/static/reaction/releases/"$TAG"
+docker run -it --rm -e HOME=/tmp/ -v "$(pwd)":/tmp/code -w /tmp/code debian:bookworm sh -c "make reaction_${TAG:1}-1_amd64.deb reaction ip46tables nft46"
+
+make "signatures_${TAG:1}"
+
+rsync -avz -e 'ssh -J pica01' ./ip46tables ./nft46 ./reaction ./reaction_${TAG:1}-1_amd64.deb ./nft46.minisig ./ip46tables.minisig ./reaction.minisig ./reaction_${TAG:1}-1_amd64.deb.minisig akesi:/var/www/static/reaction/releases/"$TAG"
 
 TOKEN="$(rbw get framagit.org token)"
 
