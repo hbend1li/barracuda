@@ -115,7 +115,7 @@ cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX again
   # print version information
 
 see usage examples, service configurations and good practices
-on the ` + bold + `wiki` + reset + `: https://framagit.org/ppom/reaction-wiki
+on the ` + bold + `wiki` + reset + `: https://reaction.ppom.me
 `)
 }
 

@@ -142,7 +142,7 @@ It will execute `iptables` when detecting ipv4, `ip6tables` when detecting ipv6 
 
 ## Wiki
 
-You'll find more ressources, service configurations, etc. on the [Wiki](https://framagit.org/ppom/reaction-wiki)!
+You'll find more ressources, service configurations, etc. on the [Wiki](https://reaction.ppom.me)!
 
 ## Installation
 
