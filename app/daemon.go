@@ -62,6 +62,12 @@ func runCommands(commands [][]string, moment string) bool {
 }
 
 func (p *Pattern) notAnIgnore(match *string) bool {
+	for _, regex := range p.compiledIgnoreRegex {
+		if regex.MatchString(*match) {
+			return false
+		}
+	}
+
 	for _, ignore := range p.Ignore {
 		if ignore == *match {
 			return false

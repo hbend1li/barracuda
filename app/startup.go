@@ -39,6 +39,17 @@ func (c *Conf) setup() {
 				logger.Fatalf("Bad configuration: pattern ignore '%v' doesn't match pattern %v! It should be fixed or removed.", ignore, pattern.nameWithBraces)
 			}
 		}
+
+		// Compile ignore regexes
+		for _, regex := range pattern.IgnoreRegex {
+			// Enclose the regex to make sure that it matches the whole detected string
+			compiledRegex, err := regexp.Compile("^" + regex + "$")
+			if err != nil {
+				log.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, pattern.name, err)
+			}
+
+			pattern.compiledIgnoreRegex = append(pattern.compiledIgnoreRegex, *compiledRegex)
+		}
 	}
 
 	if len(c.Streams) == 0 {

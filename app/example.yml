@@ -23,6 +23,9 @@ patterns:
     ignore:
       - 127.0.0.1
       - ::1
+    # Patterns can be ignored based on regexes, it will try to match the whole string detected by the pattern
+    # ignoreregex:
+    #   - '10\.0\.[0-9]{1,3}\.[0-9]{1,3}'
 
 # Those commands will be executed in order at start, before everything else
 start:

@@ -19,6 +19,9 @@ type Pattern struct {
 	Regex  string   `json:"regex"`
 	Ignore []string `json:"ignore"`
 
+	IgnoreRegex         []string        `json:"ignoreregex"`
+	compiledIgnoreRegex []regexp.Regexp `json:"-"`
+
 	name           string `json:"-"`
 	nameWithBraces string `json:"-"`
 }
