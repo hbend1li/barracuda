@@ -7,3 +7,4 @@
 /deb
 *.deb
 *.minisig
+*.qcow2
