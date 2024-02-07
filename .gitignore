@@ -1,5 +1,6 @@
 /reaction
 /ip46tables
+/nft46
 /reaction*.db
 /reaction*.sock
 /result

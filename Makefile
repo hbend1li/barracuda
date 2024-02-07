@@ -6,7 +6,7 @@ SYSTEMDDIR ?= /etc/systemd
 all: reaction ip46tables nft46
 
 clean:
-	rm -f reaction ip46tables reaction.deb deb reaction.minisig ip46tables.minisig reaction.deb.minisig
+	rm -f reaction ip46tables nft46 reaction.deb deb reaction.minisig ip46tables.minisig reaction.deb.minisig nft46.minisig
 
 ip46tables: helpers_c/ip46tables.c
 	$(CC) -s -static helpers_c/ip46tables.c -o ip46tables
