@@ -13,6 +13,7 @@ import (
 	"framagit.org/ppom/reaction/logger"
 
 	"github.com/google/go-jsonnet"
+	"golang.org/x/exp/slices"
 )
 
 func (c *Conf) setup() {
@@ -74,17 +75,17 @@ func (c *Conf) setup() {
 			filter.name = filterName
 
 			if strings.Contains(filter.name, ".") {
-				logger.Fatalf("Bad configuration: character '.' is not allowed in filter names: '%v'", filter.name)
+				logger.Fatalf(fmt.Sprintf("Bad configuration: character '.' is not allowed in filter names: '%v'", filter.name))
 			}
 			// Parse Duration
 			if filter.RetryPeriod == "" {
 				if filter.Retry > 1 {
-					logger.Fatalf("Bad configuration: retry but no retryperiod in %v.%v", stream.name, filter.name)
+					logger.Fatalf(fmt.Sprintf("Bad configuration: retry but no retryperiod in %v.%v", stream.name, filter.name))
 				}
 			} else {
 				retryDuration, err := time.ParseDuration(filter.RetryPeriod)
 				if err != nil {
-					logger.Fatalf("Bad configuration: Failed to parse retry time in %v.%v: %v", stream.name, filter.name, err)
+					logger.Fatalf(fmt.Sprintf("Bad configuration: Failed to parse retry time in %v.%v: %v", stream.name, filter.name, err))
 				}
 				filter.retryDuration = retryDuration
 			}
@@ -95,27 +96,17 @@ func (c *Conf) setup() {
 			// Compute Regexes
 			// Look for Patterns inside Regexes
 			for _, regex := range filter.Regex {
-				for patternName, pattern := range c.Patterns {
+				for _, pattern := range c.Patterns {
 					if strings.Contains(regex, pattern.nameWithBraces) {
-
-						if filter.pattern == nil {
-							filter.pattern = pattern
-						} else if filter.pattern == pattern {
-							// no op
-						} else {
-							logger.Fatalf(
-								"Bad configuration: Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
-								filter.pattern.name, patternName, streamName, filterName,
-							)
+						if !slices.Contains(filter.pattern, pattern) {
+							filter.pattern = append(filter.pattern, pattern)
 						}
-
-						// FIXME should go in the `if filter.pattern == nil`?
 						regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 					}
 				}
 				compiledRegex, err := regexp.Compile(regex)
 				if err != nil {
-					log.Fatalf("%vBad configuration: regex of filter %s.%s: %v", logger.FATAL, stream.name, filter.name, err)
+					log.Fatal(fmt.Sprintf("Bad configuration: regex of filter %s.%s: %v", stream.name, filter.name, err))
 				}
 				filter.compiledRegex = append(filter.compiledRegex, *compiledRegex)
 			}
@@ -125,7 +116,7 @@ func (c *Conf) setup() {
 			}
 			for actionName := range filter.Actions {
 
-				action := filter.Actions[actionName]
+				action := filter.Actions[actionName]				
 				action.filter = filter
 				action.name = actionName
 

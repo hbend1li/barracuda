@@ -103,6 +103,8 @@ func basicUsage() {
   # remove currently active matches and run currently pending actions for the specified TARGET
   # (then show flushed matches and actions)
   # e.g. reaction flush 192.168.1.1
+  # Concatenate patterns with " / " if several patterns in TARGET
+  # e.g. reaction flush "192.168.1.1 / root"
 
   # options:
     -s/--socket SOCKET               # path to the client-daemon communication socket
@@ -213,7 +215,7 @@ func Main(version, commit string) {
 			logger.Fatalln("for now, -l/--limit is not supported")
 			os.Exit(1)
 		}
-		ClientFlush(f.Arg(0), *limit, *queryFormat)
+		ClientFlush(strings.Split(f.Arg(0), " / "), *limit, *queryFormat)
 
 	case "test-regex":
 		// socket not needed, no interaction with the daemon

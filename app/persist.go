@@ -134,7 +134,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 	}()
 
 	// pattern, stream, fitler → last flush
-	flushes := make(map[PSF]time.Time)
+	flushes := make(map[*PSF]time.Time)
 	for {
 		var entry LogEntry
 		var filter *Filter
@@ -160,7 +160,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 
 		// store
-		flushes[PSF{entry.Pattern, entry.Stream, entry.Filter}] = entry.T
+		flushes[&PSF{entry.Pattern, entry.Stream, entry.Filter}] = entry.T
 	}
 
 	lastTimeCpt := int64(0)
@@ -201,8 +201,8 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 
 		// check if it hasn't been flushed
-		lastGlobalFlush := flushes[PSF{entry.Pattern, "", ""}].Unix()
-		lastLocalFlush := flushes[PSF{entry.Pattern, entry.Stream, entry.Filter}].Unix()
+		lastGlobalFlush := flushes[&PSF{entry.Pattern, "", ""}].Unix()
+		lastLocalFlush := flushes[&PSF{entry.Pattern, entry.Stream, entry.Filter}].Unix()
 		entryTime := entry.T.Unix()
 		if lastLocalFlush > entryTime || lastGlobalFlush > entryTime {
 			continue

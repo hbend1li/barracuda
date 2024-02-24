@@ -42,7 +42,7 @@ type Filter struct {
 
 	Regex         []string        `json:"regex"`
 	compiledRegex []regexp.Regexp `json:"-"`
-	pattern       *Pattern        `json:"-"`
+	pattern       []*Pattern        `json:"-"`
 
 	Retry         int           `json:"retry"`
 	RetryPeriod   string        `json:"retryperiod"`
@@ -67,7 +67,7 @@ type Action struct {
 type LogEntry struct {
 	T              time.Time
 	S              int64
-	Pattern        string
+	Pattern        []string
 	Stream, Filter string
 	SF             int
 	Exec           bool
@@ -82,37 +82,43 @@ type WriteDB struct {
 	file *os.File
 	enc  *gob.Encoder
 }
-
-type MatchesMap map[PF]map[time.Time]struct{}
-type ActionsMap map[PA]map[time.Time]struct{}
+// https://stackoverflow.com/a/69691894
+type MatchesMap map[*PF]map[time.Time]struct{}
+type ActionsMap map[*PA]map[time.Time]struct{}
 
 // Helper structs made to carry information
+// Stream, Filter
 type SF struct{ s, f string }
-type PSF struct{ p, s, f string }
+// Pattern, Stream, Filter
+type PSF struct{
+	p []string
+	s string
+	f string
+}
 type PF struct {
-	p string
+	p []string
 	f *Filter
 }
 type PFT struct {
-	p string
+	p []string
 	f *Filter
 	t time.Time
 }
 type PA struct {
-	p string
+	p []string
 	a *Action
 }
 type PAT struct {
-	p string
+	p []string
 	a *Action
 	t time.Time
 }
 
 type FlushMatchOrder struct {
-	p   string
+	p   []string
 	ret chan MatchesMap
 }
 type FlushActionOrder struct {
-	p   string
+	p   []string
 	ret chan ActionsMap
 }

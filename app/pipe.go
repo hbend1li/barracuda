@@ -7,6 +7,7 @@ import (
 	"path"
 	"sync"
 	"time"
+	"strings"
 
 	"framagit.org/ppom/reaction/logger"
 )
@@ -24,7 +25,7 @@ func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_a
 		if cs[filter.stream.name][filter.name] == nil {
 			cs[filter.stream.name][filter.name] = make(MapPatternStatus)
 		}
-		cs[filter.stream.name][filter.name][pattern] = &PatternStatus{len(times), nil}
+		cs[filter.stream.name][filter.name][strings.Join(pattern, " / ")] = &PatternStatus{len(times), nil}
 	}
 
 	local_matchesLock.Unlock()
@@ -39,10 +40,10 @@ func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_a
 		if cs[action.filter.stream.name][action.filter.name] == nil {
 			cs[action.filter.stream.name][action.filter.name] = make(MapPatternStatus)
 		}
-		if cs[action.filter.stream.name][action.filter.name][pattern] == nil {
-			cs[action.filter.stream.name][action.filter.name][pattern] = new(PatternStatus)
+		if cs[action.filter.stream.name][action.filter.name][strings.Join(pattern, " / ")] == nil {
+			cs[action.filter.stream.name][action.filter.name][strings.Join(pattern, " / ")] = new(PatternStatus)
 		}
-		ps := cs[action.filter.stream.name][action.filter.name][pattern]
+		ps := cs[action.filter.stream.name][action.filter.name][strings.Join(pattern, " / ")]
 		if ps.Actions == nil {
 			ps.Actions = make(map[string][]string)
 		}

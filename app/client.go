@@ -21,7 +21,7 @@ const (
 
 type Request struct {
 	Request int
-	Pattern string
+	Pattern []string
 }
 
 type Response struct {
@@ -86,7 +86,7 @@ func usage(err string) {
 }
 
 func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
-	response := SendAndRetrieve(Request{Show, ""})
+	response := SendAndRetrieve(Request{Show, []string{""}})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 	}
@@ -167,7 +167,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	os.Exit(0)
 }
 
-func ClientFlush(pattern, streamfilter, format string) {
+func ClientFlush(pattern []string, streamfilter, format string) {
 	response := SendAndRetrieve(Request{Flush, pattern})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
