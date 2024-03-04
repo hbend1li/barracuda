@@ -38,7 +38,7 @@ int isIPv6(char *tab, int len) {
 	}
 	// Each char must be a digit, :, a-f, or A-F
 	for (i=0; i<len; i++) {
-		if (!isdigit(tab[i]) && tab[i] != ':' && !(tab[i] >= 'a' && tab[i] <= 'f') && !(tab[i] >= 'A' && tab[i] <= 'F')) {
+		if (!isdigit(tab[i]) && tab[i] != ':' && tab[i] != '.' && !(tab[i] >= 'a' && tab[i] <= 'f') && !(tab[i] >= 'A' && tab[i] <= 'F')) {
 			return 0;
 		}
 	}
