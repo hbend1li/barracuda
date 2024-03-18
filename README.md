@@ -208,3 +208,10 @@ To install the systemd file as well
 ```shell
 make install_systemd
 ```
+
+## Development
+
+Contributions are welcome. For any substantial feature, please file an issue first, to be assured that we agree on the feature, and to avoid unnecessary work.
+
+This is a free time project, so I'm not working on schedule.
+However, if you're willing to fund the project, I can priorise and plan paid work. This includes features, documentation and specific JSONnet configurations.
