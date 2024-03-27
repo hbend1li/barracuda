@@ -1,11 +1,15 @@
-// This file is using JSONNET, a complete configuration language based on JSON
+// This file is using JSONnet, a complete configuration language based on JSON
 // See https://jsonnet.org
-// JSONNET is a superset of JSON, so one can write plain JSON files if wanted.
+// JSONnet is a superset of JSON, so one can write plain JSON files if wanted.
 // Note that YAML is also supported, see ./example.yml
 
-// JSONNET functions
+// This example configuration file is a good starting point, but you're
+// strongly encouraged to take a look at the full documentation: https://reaction.ppom.me
+
+// JSONnet functions
 local iptables(args) = ['ip46tables', '-w'] + args;
-// ip46tables is a minimal C program (only POSIX dependencies) present in a subdirectory of this repo.
+// ip46tables is a minimal C program (only POSIX dependencies) present in a
+// subdirectory of this repo.
 // it permits to handle both ipv4/iptables and ipv6/ip6tables commands
 
 // See meaning and usage of this function around L106
@@ -43,14 +47,16 @@ local banFor(time) = {
   start: [
     // Create an iptables chain for reaction
     iptables(['-N', 'reaction']),
-    // Insert this chain as the first item of the INPUT chain (for incoming connections)
+    // Insert this chain as the first item of the INPUT & FORWARD chains (for incoming connections)
     iptables(['-I', 'INPUT', '-p', 'all', '-j', 'reaction']),
+    iptables(['-I', 'FORWARD', '-p', 'all', '-j', 'reaction']),
   ],
 
   // Those commands will be executed in order at stop, after everything else
   stop: [
-    // Remove the chain from the INPUT chain
+    // Remove the chain from the INPUT & FORWARD chains
     iptables(['-D', 'INPUT', '-p', 'all', '-j', 'reaction']),
+    iptables(['-D', 'FORWARD', '-p', 'all', '-j', 'reaction']),
     // Empty the chain
     iptables(['-F', 'reaction']),
     // Delete the chain

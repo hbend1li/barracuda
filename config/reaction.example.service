@@ -1,6 +1,8 @@
 # vim: ft=systemd
 [Install]
 WantedBy=multi-user.target
+# Ensure reaction will insert its chain after docker has inserted theirs. Only useful when iptables & docker are used
+# After=docker.service
 
 # See `man systemd.exec` and `man systemd.service` for most options below
 [Service]

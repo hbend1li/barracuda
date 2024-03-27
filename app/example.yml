@@ -1,4 +1,11 @@
 ---
+# This example configuration file is a good starting point, but you're
+# strongly encouraged to take a look at the full documentation: https://reaction.ppom.me
+#
+# This file is using the well-established YAML configuration language.
+# Note that the more powerful JSONnet configuration language is also supported
+# and that the documentation uses JSONnet
+
 # definitions are just a place to put chunks of conf you want to reuse in another place
 # using YAML anchors `&name` and pointers `*name`
 # definitions are not readed by reaction
@@ -31,10 +38,12 @@ patterns:
 start:
   - [ 'ip46tables', '-w', '-N', 'reaction' ]
   - [ 'ip46tables', '-w', '-I', 'INPUT', '-p', 'all', '-j', 'reaction' ]
+  - [ 'ip46tables', '-w', '-I', 'FORWARD', '-p', 'all', '-j', 'reaction' ]
 
 # Those commands will be executed in order at stop, after everything else
 stop:
   - [ 'ip46tables', '-w,', '-D', 'INPUT', '-p', 'all', '-j', 'reaction' ]
+  - [ 'ip46tables', '-w,', '-D', 'FORWARD', '-p', 'all', '-j', 'reaction' ]
   - [ 'ip46tables', '-w', '-F', 'reaction' ]
   - [ 'ip46tables', '-w', '-X', 'reaction' ]
 
