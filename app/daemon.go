@@ -106,11 +106,16 @@ func (f *Filter) match(line *string) []string {
 			}
 			if f.pattern == nil {
 				// No pattern, so this match will never actually be used
-				return []string{"."}
+				return nil
 			}
 		}
 	}
-	return result
+	if len(result) == len(f.pattern) {
+		return result
+	} else {
+		// Incomplete match = no match
+		return nil
+	}
 }
 
 func (f *Filter) sendActions(match []string, at time.Time) {
