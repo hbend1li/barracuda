@@ -76,5 +76,5 @@ func Fatalln(args ...any) {
 }
 
 func Fatalf(format string, args ...any) {
-	log.Fatalf(FATAL.String()+format, args)
+	log.Fatalf(FATAL.String()+format, args...)
 }
