@@ -111,6 +111,10 @@ func basicUsage() {
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
 cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
 
+  # options:
+    -c/--config CONFIG_FILE          # configuration file in json, jsonnet or yaml format
+                                     # optional: permits to use patterns like <ip> in regex
+
 ` + bold + `reaction version` + reset + `
   # print version information
 
@@ -213,24 +217,17 @@ func Main(version, commit string) {
 
 	case "test-regex":
 		// socket not needed, no interaction with the daemon
+		confFilename := addConfFlag(f)
 		subCommandParse(f, 2)
+		if *confFilename == "" {
+			logger.Println(logger.WARN, "no configuration file provided. Can't make use of registered patterns.")
+		}
 		if f.Arg(0) == "" {
 			logger.Fatalln("subcommand test-regex takes at least one REGEX argument")
 			basicUsage()
 			os.Exit(1)
 		}
-		regex, err := regexp.Compile(f.Arg(0))
-		if err != nil {
-			logger.Fatalln("ERROR the specified regex is invalid: %v", err)
-			os.Exit(1)
-		}
-		if f.Arg(1) == "" {
-			logger.Println(logger.INFO, "no second argument: reading from stdin")
-
-			MatchStdin(regex)
-		} else {
-			Match(regex, f.Arg(1))
-		}
+		Match(*confFilename, f.Arg(0), f.Arg(1))
 
 	default:
 		logger.Fatalf("subcommand %v not recognized. Try `reaction help`", os.Args[1])

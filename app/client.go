@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strings"
 
 	"framagit.org/ppom/reaction/logger"
 	"sigs.k8s.io/yaml"
@@ -186,17 +187,51 @@ func ClientFlush(pattern, streamfilter, format string) {
 	os.Exit(0)
 }
 
-func Match(reg *regexp.Regexp, line string) {
-	if reg.MatchString(line) {
-		fmt.Printf("\033[32mmatching\033[0m: %v\n", line)
-	} else {
-		fmt.Printf("\033[31mno match\033[0m: %v\n", line)
-	}
-}
+func Match(confFilename, regex, line string) {
+	conf := parseConf(confFilename)
 
-func MatchStdin(reg *regexp.Regexp) {
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		Match(reg, scanner.Text())
+	// Code close to app/startup.go
+	var usedPattern *Pattern
+	for patternName, pattern := range conf.Patterns {
+		if strings.Contains(regex, pattern.nameWithBraces) {
+			if usedPattern != nil {
+				logger.Fatalf("Bad regex: Can't mix different patterns (%s, %s) in same line", usedPattern.name, patternName)
+			}
+			usedPattern = pattern
+			regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
+		}
+	}
+	reg, err := regexp.Compile(regex)
+	if err != nil {
+		logger.Fatalln("ERROR the specified regex is invalid: %v", err)
+		os.Exit(1)
+	}
+
+	match := func(line string) {
+		if matches := reg.FindStringSubmatch(line); matches != nil {
+			if usedPattern != nil {
+				match := matches[reg.SubexpIndex(usedPattern.name)]
+
+				if usedPattern.notAnIgnore(&match) {
+					fmt.Printf("\033[32mmatching\033[0m [%v]: %v\n", match, line)
+				} else {
+					fmt.Printf("\033[33mignore matching\033[0m [%v]: %v\n", match, line)
+				}
+			} else {
+				fmt.Printf("\033[32mmatching\033[0m [%v]:\n", line)
+			}
+		} else {
+			fmt.Printf("\033[31mno match\033[0m: %v\n", line)
+		}
+	}
+
+	if line != "" {
+		match(line)
+	} else {
+		logger.Println(logger.INFO, "no second argument: reading from stdin")
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			match(scanner.Text())
+		}
 	}
 }
