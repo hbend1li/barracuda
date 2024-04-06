@@ -6,7 +6,7 @@ git push --tags
 
 TAG="$(git tag --sort=v:refname | tail -n1)"
 
-docker run -it --rm -e HOME=/tmp/ -v "$(pwd)":/tmp/code -w /tmp/code debian:bookworm sh -c "make reaction_${TAG:1}-1_amd64.deb reaction ip46tables nft46"
+docker run -it --rm -e HOME=/tmp/ -v "$(pwd)":/tmp/code -w /tmp/code golang:1.20-bullseye sh -c "make reaction_${TAG:1}-1_amd64.deb reaction ip46tables nft46"
 
 make "signatures_${TAG:1}"
 
