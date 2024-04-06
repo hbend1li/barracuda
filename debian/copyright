@@ -1,12 +1,12 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Source: https://framagit.org/ppom/reaction
 Upstream-Name: reaction
-Upstream-Contact: Ppom <reaction@ppom.me>
+Upstream-Contact: ppom <reaction@ppom.me>
 License: AGPL-3
 
 Files:
  *
-Copyright: 2023 Ppom
+Copyright: 2023 ppom
 License: AGPL-3
 
 Files:
