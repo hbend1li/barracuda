@@ -26,12 +26,12 @@ reaction_%-1_amd64.deb:
 	cd debian-packaging && tar xf "reaction_${*}.orig.tar.gz"
 	cp -r debian "debian-packaging/reaction-v${*}"
 	if [ -e "debian/changelog" ]; then \
-        cd "debian-packaging/reaction-v${*}" && \
-        DEBFULLNAME=ppom DEBEMAIL=reaction@ppom.me dch --package reaction --newversion "${*}-1" "New upstream release."; \
-    else \
-        cd "debian-packaging/reaction-v${*}" && \
-        DEBFULLNAME=ppom DEBEMAIL=reaction@ppom.me dch --create --package reaction --newversion "${*}-1" "Initial release."; \
-    fi
+		cd "debian-packaging/reaction-v${*}" && \
+		DEBFULLNAME=ppom DEBEMAIL=reaction@ppom.me dch --package reaction --newversion "${*}-1" "New upstream release."; \
+	else \
+		cd "debian-packaging/reaction-v${*}" && \
+		DEBFULLNAME=ppom DEBEMAIL=reaction@ppom.me dch --create --package reaction --newversion "${*}-1" "Initial release."; \
+	fi
 	cd "debian-packaging/reaction-v${*}" && DEBFULLNAME=ppom DEBEMAIL=reaction@ppom.me dch --release --distribution stable --urgency low ""
 	cd "debian-packaging/reaction-v${*}" && debuild --prepend-path=/go/bin:/usr/local/go/bin -us -uc
 	cp "debian-packaging/reaction-v${*}/debian/changelog" debian/
