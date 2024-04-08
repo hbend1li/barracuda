@@ -13,16 +13,6 @@ import (
 	"framagit.org/ppom/reaction/logger"
 )
 
-// Compare content and ordering. Case sensitive.
-func IsStringArrayEqual(one, two []string) bool {
-	for i, a := range one {
-		if a != two[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // Executes a command and channel-send its stdout
 func cmdStdout(commandline []string) chan *string {
 	lines := make(chan *string)
@@ -87,8 +77,8 @@ func (p *Pattern) notAnIgnore(match *string) bool {
 }
 
 // Whether one of the filter's regexes is matched on a line
-func (f *Filter) match(line *string) []string {
-	var result []string
+func (f *Filter) match(line *string) string {
+	var result string
 	for _, regex := range f.compiledRegex {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
@@ -101,44 +91,47 @@ func (f *Filter) match(line *string) []string {
 				match := matches[regex.SubexpIndex(p.name)]
 				if p.notAnIgnore(&match) {
 					logger.Printf(logger.INFO, "%s.%s: match [%v]\n", f.stream.name, f.name, match)
-					result = append(result, match)
+					if len(result) == 0 {
+						result = match
+					} else {
+						result = strings.Join([]string{result, match}, "\x00")
+					}
 				}
 			}
 			if f.pattern == nil {
 				// No pattern, so this match will never actually be used
-				return nil
+				return ""
 			}
 		}
 	}
-	if len(result) == len(f.pattern) {
+	if len(strings.Split(result, "\x00")) == len(f.pattern) {
 		return result
 	} else {
 		// Incomplete match = no match
-		return nil
+		return ""
 	}
 }
 
-func (f *Filter) sendActions(match []string, at time.Time) {
+func (f *Filter) sendActions(match string, at time.Time) {
 	for _, a := range f.Actions {
 		actionsC <- PAT{match, a, at.Add(a.afterDuration)}
 	}
 }
 
-func (a *Action) exec(match []string) {
+func (a *Action) exec(match string) {
 	defer wgActions.Done()
 
 	var computedCommand []string
-	var cmdItem string
 
 	if a.filter.pattern != nil {
 		computedCommand = make([]string, 0, len(a.Cmd))
+		matches := strings.Split(match, "\x00")
 
 		for _, item := range a.Cmd {
-			cmdItem = strings.Clone(item)
 			for i, p := range a.filter.pattern {
-				cmdItem = strings.ReplaceAll(cmdItem, p.nameWithBraces, match[i])
+				item = strings.ReplaceAll(item, p.nameWithBraces, matches[i])
 			}
-			computedCommand = append(computedCommand, cmdItem)
+			computedCommand = append(computedCommand, item)
 		}
 	} else {
 		computedCommand = a.Cmd
@@ -177,7 +170,7 @@ func ActionsManager(concurrency int) {
 			}
 		}()
 	}
-	execAction := func(a *Action, p []string) {
+	execAction := func(a *Action, p string) {
 		wgActions.Add(1)
 		execActionsC <- PA{p, a}
 	}
@@ -195,10 +188,10 @@ func ActionsManager(concurrency int) {
 				execAction(action, pattern)
 			} else {
 				actionsLock.Lock()
-				if actions[&pa] == nil {
-					actions[&pa] = make(map[time.Time]struct{})
+				if actions[pa] == nil {
+					actions[pa] = make(map[time.Time]struct{})
 				}
-				actions[&pa][then] = struct{}{}
+				actions[pa][then] = struct{}{}
 				actionsLock.Unlock()
 				go func(insidePat PAT, insideNow time.Time) {
 					time.Sleep(insidePat.t.Sub(insideNow))
@@ -209,8 +202,8 @@ func ActionsManager(concurrency int) {
 			pa := PA{pat.p, pat.a}
 			pattern, action, then := pat.p, pat.a, pat.t
 			actionsLock.Lock()
-			if actions[&pa] != nil {
-				delete(actions[&pa], then)
+			if actions[pa] != nil {
+				delete(actions[pa], then)
 			}
 			actionsLock.Unlock()
 			execAction(action, pattern)
@@ -218,7 +211,7 @@ func ActionsManager(concurrency int) {
 			ret := make(ActionsMap)
 			actionsLock.Lock()
 			for pa := range actions {
-				if IsStringArrayEqual(pa.p, fo.p) {
+				if pa.p == fo.p {
 					for range actions[pa] {
 						execAction(pa.a, pa.p)
 					}
@@ -268,7 +261,7 @@ func MatchesManager() {
 			matchesManagerHandleFlush(fo)
 		case pft = <-matchesC:
 
-			entry := LogEntry{pft.t, 0, pft.p, pft.f.stream.name, pft.f.name, 0, false}
+			entry := LogEntry{pft.t, 0, strings.Join(strings.Split(pft.p, "\x00"), " / "), pft.f.stream.name, pft.f.name, 0, false}
 
 			entry.Exec = matchesManagerHandleMatch(pft)
 
@@ -281,7 +274,7 @@ func matchesManagerHandleFlush(fo FlushMatchOrder) {
 	ret := make(MatchesMap)
 	matchesLock.Lock()
 	for pf := range matches {
-		if IsStringArrayEqual(fo.p, pf.p) {
+		if fo.p == pf.p {
 			if fo.ret != nil {
 				ret[pf] = matches[pf]
 			}
@@ -298,32 +291,32 @@ func matchesManagerHandleMatch(pft PFT) bool {
 	matchesLock.Lock()
 	defer matchesLock.Unlock()
 
-	filter, pattern, then := pft.f, pft.p, pft.t
+	filter, patterns, then := pft.f, pft.p, pft.t
 	pf := PF{pft.p, pft.f}
 
 	if filter.Retry > 1 {
 		// make sure map exists
-		if matches[&pf] == nil {
-			matches[&pf] = make(map[time.Time]struct{})
+		if matches[pf] == nil {
+			matches[pf] = make(map[time.Time]struct{})
 		}
 		// add new match
-		matches[&pf][then] = struct{}{}
+		matches[pf][then] = struct{}{}
 		// remove match when expired
 		go func(pf PF, then time.Time) {
 			time.Sleep(then.Sub(time.Now()) + filter.retryDuration)
 			matchesLock.Lock()
-			if matches[&pf] != nil {
+			if matches[pf] != nil {
 				// FIXME replace this and all similar occurences
 				// by clear() when switching to go 1.21
-				delete(matches[&pf], then)
+				delete(matches[pf], then)
 			}
 			matchesLock.Unlock()
 		}(pf, then)
 	}
 
-	if filter.Retry <= 1 || len(matches[&pf]) >= filter.Retry {
-		delete(matches, &pf)
-		filter.sendActions(pattern, then)
+	if filter.Retry <= 1 || len(matches[pf]) >= filter.Retry {
+		delete(matches, pf)
+		filter.sendActions(patterns, then)
 		return true
 	}
 	return false
