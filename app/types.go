@@ -82,7 +82,7 @@ type WriteDB struct {
 	file *os.File
 	enc  *gob.Encoder
 }
-// https://stackoverflow.com/a/69691894
+
 type MatchesMap map[PF]map[time.Time]struct{}
 type ActionsMap map[PA]map[time.Time]struct{}
 
