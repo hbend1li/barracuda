@@ -60,7 +60,8 @@ func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
 		basicUsage()
 		os.Exit(0)
 	}
-	if len(f.Args()) > maxRemainingArgs {
+	// -1 = no limit to remaining args
+	if maxRemainingArgs > -1 && len(f.Args()) > maxRemainingArgs {
 		fmt.Printf("ERROR unrecognized argument(s): %v\n", f.Args()[maxRemainingArgs:])
 		basicUsage()
 		os.Exit(1)
@@ -102,9 +103,7 @@ func basicUsage() {
 ` + bold + `reaction flush` + reset + ` TARGET
   # remove currently active matches and run currently pending actions for the specified TARGET
   # (then show flushed matches and actions)
-  # e.g. reaction flush 192.168.1.1
-  # Concatenate patterns with " / " if several patterns in TARGET
-  # e.g. reaction flush "192.168.1.1 / root"
+  # e.g. reaction flush 192.168.1.1 root
 
   # options:
     -s/--socket SOCKET               # path to the client-daemon communication socket
@@ -200,7 +199,7 @@ func Main(version, commit string) {
 		SocketPath = addSocketFlag(f)
 		queryFormat := addFormatFlag(f)
 		limit := addLimitFlag(f)
-		subCommandParse(f, 1)
+		subCommandParse(f, -1)
 		if *queryFormat != "yaml" && *queryFormat != "json" {
 			logger.Fatalln("only yaml and json formats are supported")
 			f.PrintDefaults()
@@ -215,7 +214,7 @@ func Main(version, commit string) {
 			logger.Fatalln("for now, -l/--limit is not supported")
 			os.Exit(1)
 		}
-		ClientFlush(strings.Split(f.Arg(0), " / "), *limit, *queryFormat)
+		ClientFlush(f.Args(), *limit, *queryFormat)
 
 	case "test-regex":
 		// socket not needed, no interaction with the daemon

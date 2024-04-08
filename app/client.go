@@ -21,7 +21,7 @@ const (
 
 type Request struct {
 	Request int
-	Pattern []string
+	Pattern string
 }
 
 type Response struct {
@@ -86,7 +86,7 @@ func usage(err string) {
 }
 
 func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
-	response := SendAndRetrieve(Request{Show, []string{""}})
+	response := SendAndRetrieve(Request{Show, ""})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 	}
@@ -138,9 +138,15 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	if regex != nil {
 		for streamName := range response.ClientStatus {
 			for filterName := range response.ClientStatus[streamName] {
-				for patternName := range response.ClientStatus[streamName][filterName] {
-					if !regex.MatchString(patternName) {
-						delete(response.ClientStatus[streamName][filterName], patternName)
+				for patterns := range response.ClientStatus[streamName][filterName] {
+					pmatch := false
+					for _, p := range strings.Split(patterns, "\x00") {
+						if regex.MatchString(p) {
+							pmatch = true
+						}
+					}
+					if !pmatch {
+						delete(response.ClientStatus[streamName][filterName], patterns)
 					}
 				}
 				if len(response.ClientStatus[streamName][filterName]) == 0 {
@@ -163,12 +169,22 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	if err != nil {
 		logger.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}
+
+	// Replace \0 joined string with space joined string ("1.2.3.4\0root" -> "1.2.3.4 root")
+	for streamName := range response.ClientStatus {
+		for filterName := range response.ClientStatus[streamName] {
+			for patterns := range response.ClientStatus[streamName][filterName] {
+				text = []byte(strings.ReplaceAll(string(text), strings.Join(strings.Split(patterns, "\x00"), "\\0"), strings.Join(strings.Split(patterns, "\x00"), " ")))
+			}
+		}
+	}
 	fmt.Println(string(text))
+
 	os.Exit(0)
 }
 
-func ClientFlush(pattern []string, streamfilter, format string) {
-	response := SendAndRetrieve(Request{Flush, pattern})
+func ClientFlush(patterns []string, streamfilter, format string) {
+	response := SendAndRetrieve(Request{Flush, strings.Join(patterns, "\x00")})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
