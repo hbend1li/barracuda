@@ -75,17 +75,17 @@ func (c *Conf) setup() {
 			filter.name = filterName
 
 			if strings.Contains(filter.name, ".") {
-				logger.Fatalf(fmt.Sprintf("Bad configuration: character '.' is not allowed in filter names: '%v'", filter.name))
+				logger.Fatalf("Bad configuration: character '.' is not allowed in filter names: '%v'", filter.name)
 			}
 			// Parse Duration
 			if filter.RetryPeriod == "" {
 				if filter.Retry > 1 {
-					logger.Fatalf(fmt.Sprintf("Bad configuration: retry but no retryperiod in %v.%v", stream.name, filter.name))
+					logger.Fatalf("Bad configuration: retry but no retryperiod in %v.%v", stream.name, filter.name)
 				}
 			} else {
 				retryDuration, err := time.ParseDuration(filter.RetryPeriod)
 				if err != nil {
-					logger.Fatalf(fmt.Sprintf("Bad configuration: Failed to parse retry time in %v.%v: %v", stream.name, filter.name, err))
+					logger.Fatalf("Bad configuration: Failed to parse retry time in %v.%v: %v", stream.name, filter.name, err)
 				}
 				filter.retryDuration = retryDuration
 			}
@@ -106,7 +106,7 @@ func (c *Conf) setup() {
 				}
 				compiledRegex, err := regexp.Compile(regex)
 				if err != nil {
-					log.Fatal(fmt.Sprintf("Bad configuration: regex of filter %s.%s: %v", stream.name, filter.name, err))
+					log.Fatal("Bad configuration: regex of filter %s.%s: %v", stream.name, filter.name, err)
 				}
 				filter.compiledRegex = append(filter.compiledRegex, *compiledRegex)
 			}
