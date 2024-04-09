@@ -21,7 +21,7 @@ const (
 
 type Request struct {
 	Request int
-	Pattern string
+	Pattern Match
 }
 
 type Response struct {
@@ -53,7 +53,7 @@ type PatternStatus struct {
 	Matches int                 `json:"matches,omitempty"`
 	Actions map[string][]string `json:"actions,omitempty"`
 }
-type MapPatternStatus map[string]*PatternStatus
+type MapPatternStatus map[Match]*PatternStatus
 type MapPatternStatusFlush MapPatternStatus
 
 type ClientStatus map[string]map[string]MapPatternStatus
@@ -140,7 +140,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 			for filterName := range response.ClientStatus[streamName] {
 				for patterns := range response.ClientStatus[streamName][filterName] {
 					pmatch := false
-					for _, p := range strings.Split(patterns, "\x00") {
+					for _, p := range patterns.Split() {
 						if regex.MatchString(p) {
 							pmatch = true
 						}
@@ -184,7 +184,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 }
 
 func ClientFlush(patterns []string, streamfilter, format string) {
-	response := SendAndRetrieve(Request{Flush, strings.Join(patterns, "\x00")})
+	response := SendAndRetrieve(Request{Flush, JoinMatch(patterns)})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
@@ -203,7 +203,7 @@ func ClientFlush(patterns []string, streamfilter, format string) {
 	os.Exit(0)
 }
 
-func Match(confFilename, regex, line string) {
+func TestRegex(confFilename, regex, line string) {
 	conf := parseConf(confFilename)
 
 	// Code close to app/startup.go

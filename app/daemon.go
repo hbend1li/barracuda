@@ -2,7 +2,6 @@ package app
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -78,7 +77,7 @@ func (p *Pattern) notAnIgnore(match *string) bool {
 }
 
 // Whether one of the filter's regexes is matched on a line
-func (f *Filter) match(line *string) string {
+func (f *Filter) match(line *string) Match {
 	for _, regex := range f.compiledRegex {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
@@ -91,13 +90,8 @@ func (f *Filter) match(line *string) string {
 					}
 				}
 				if len(result) == len(f.pattern) {
-					var b strings.Builder
-					fmt.Fprintf(&b, "%s.%s: match ", f.stream.name, f.name)
-					for _, match := range result {
-						fmt.Fprintf(&b, "[%s]", match)
-					}
-					logger.Printf(logger.INFO, b.String())
-					return strings.Join(result, "\x00")
+					logger.Printf(logger.INFO, "%s.%s: match %s", f.stream.name, f.name, WithBrackets(result))
+					return JoinMatch(result)
 				}
 			} else {
 				logger.Printf(logger.INFO, "%s.%s: match [.]\n", f.stream.name, f.name)
@@ -109,20 +103,20 @@ func (f *Filter) match(line *string) string {
 	return ""
 }
 
-func (f *Filter) sendActions(match string, at time.Time) {
+func (f *Filter) sendActions(match Match, at time.Time) {
 	for _, a := range f.Actions {
 		actionsC <- PAT{match, a, at.Add(a.afterDuration)}
 	}
 }
 
-func (a *Action) exec(match string) {
+func (a *Action) exec(match Match) {
 	defer wgActions.Done()
 
 	var computedCommand []string
 
 	if a.filter.pattern != nil {
 		computedCommand = make([]string, 0, len(a.Cmd))
-		matches := strings.Split(match, "\x00")
+		matches := match.Split()
 
 		for _, item := range a.Cmd {
 			for i, p := range a.filter.pattern {
@@ -167,7 +161,7 @@ func ActionsManager(concurrency int) {
 			}
 		}()
 	}
-	execAction := func(a *Action, p string) {
+	execAction := func(a *Action, p Match) {
 		wgActions.Add(1)
 		execActionsC <- PA{p, a}
 	}

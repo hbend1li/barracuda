@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"framagit.org/ppom/reaction/logger"
@@ -202,7 +201,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 
 		// check if number of patterns is in sync
-		if len(strings.Split(entry.Pattern, "\x00")) != len(filter.pattern) {
+		if len(entry.Pattern.Split()) != len(filter.pattern) {
 			continue
 		}
 

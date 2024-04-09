@@ -228,7 +228,7 @@ func Main(version, commit string) {
 			basicUsage()
 			os.Exit(1)
 		}
-		Match(*confFilename, f.Arg(0), f.Arg(1))
+		TestRegex(*confFilename, f.Arg(0), f.Arg(1))
 
 	default:
 		logger.Fatalf("subcommand %v not recognized. Try `reaction help`", os.Args[1])
