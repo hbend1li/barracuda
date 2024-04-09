@@ -100,8 +100,8 @@ func basicUsage() {
     -l/--limit STREAM[.FILTER]       # only show items related to this STREAM (or STREAM.FILTER)
     -p/--pattern PATTERN             # only show items matching the PATTERN regex
 
-` + bold + `reaction flush` + reset + ` TARGET
-  # remove currently active matches and run currently pending actions for the specified TARGET
+` + bold + `reaction flush` + reset + ` TARGET [TARGET...]
+  # remove currently active matches and run currently pending actions for the specified TARGET(s)
   # (then show flushed matches and actions)
   # e.g. reaction flush 192.168.1.1 root
 

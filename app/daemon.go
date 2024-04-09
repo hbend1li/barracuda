@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -78,38 +79,34 @@ func (p *Pattern) notAnIgnore(match *string) bool {
 
 // Whether one of the filter's regexes is matched on a line
 func (f *Filter) match(line *string) string {
-	var result string
 	for _, regex := range f.compiledRegex {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
-			var pnames []string
-			for _, p := range f.pattern {
-				pnames = append(pnames, p.name)
-			}
-
-			for _, p := range f.pattern {
-				match := matches[regex.SubexpIndex(p.name)]
-				if p.notAnIgnore(&match) {
-					logger.Printf(logger.INFO, "%s.%s: match [%v]\n", f.stream.name, f.name, match)
-					if len(result) == 0 {
-						result = match
-					} else {
-						result = strings.Join([]string{result, match}, "\x00")
+			if f.pattern != nil {
+				var result []string
+				for _, p := range f.pattern {
+					match := matches[regex.SubexpIndex(p.name)]
+					if p.notAnIgnore(&match) {
+						result = append(result, match)
 					}
 				}
-			}
-			if f.pattern == nil {
+				if len(result) == len(f.pattern) {
+					var b strings.Builder
+					fmt.Fprintf(&b, "%s.%s: match ", f.stream.name, f.name)
+					for _, match := range result {
+						fmt.Fprintf(&b, "[%s]", match)
+					}
+					logger.Printf(logger.INFO, b.String())
+					return strings.Join(result, "\x00")
+				}
+			} else {
+				logger.Printf(logger.INFO, "%s.%s: match [.]\n", f.stream.name, f.name)
 				// No pattern, so this match will never actually be used
-				return ""
+				return "."
 			}
 		}
 	}
-	if len(strings.Split(result, "\x00")) == len(f.pattern) {
-		return result
-	} else {
-		// Incomplete match = no match
-		return ""
-	}
+	return ""
 }
 
 func (f *Filter) sendActions(match string, at time.Time) {
@@ -335,7 +332,7 @@ func StreamManager(s *Stream, endedSignal chan *Stream) {
 				return
 			}
 			for _, filter := range s.Filters {
-				if match := filter.match(line); len(match) > 0 {
+				if match := filter.match(line); match != "" {
 					matchesC <- PFT{match, filter, time.Now()}
 				}
 			}

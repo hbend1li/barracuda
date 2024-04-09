@@ -116,7 +116,7 @@ func (c *Conf) setup() {
 			}
 			for actionName := range filter.Actions {
 
-				action := filter.Actions[actionName]				
+				action := filter.Actions[actionName]
 				action.filter = filter
 				action.name = actionName
 

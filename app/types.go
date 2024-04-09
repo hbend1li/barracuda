@@ -42,7 +42,7 @@ type Filter struct {
 
 	Regex         []string        `json:"regex"`
 	compiledRegex []regexp.Regexp `json:"-"`
-	pattern       []*Pattern        `json:"-"`
+	pattern       []*Pattern      `json:"-"`
 
 	Retry         int           `json:"retry"`
 	RetryPeriod   string        `json:"retryperiod"`
@@ -89,12 +89,12 @@ type ActionsMap map[PA]map[time.Time]struct{}
 // Helper structs made to carry information
 // Stream, Filter
 type SF struct{ s, f string }
+
 // Pattern, Stream, Filter
-type PSF struct{
-	p string
-	s string
-	f string
+type PSF struct {
+	p, s, f string
 }
+
 type PF struct {
 	p string
 	f *Filter
