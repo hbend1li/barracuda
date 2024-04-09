@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"runtime"
@@ -46,7 +45,7 @@ func (c *Conf) setup() {
 			// Enclose the regex to make sure that it matches the whole detected string
 			compiledRegex, err := regexp.Compile("^" + regex + "$")
 			if err != nil {
-				log.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, pattern.name, err)
+				logger.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, pattern.name, err)
 			}
 
 			pattern.compiledIgnoreRegex = append(pattern.compiledIgnoreRegex, *compiledRegex)
@@ -106,7 +105,7 @@ func (c *Conf) setup() {
 				}
 				compiledRegex, err := regexp.Compile(regex)
 				if err != nil {
-					log.Fatal("Bad configuration: regex of filter %s.%s: %v", stream.name, filter.name, err)
+					logger.Fatalf("Bad configuration: regex of filter %s.%s: %v", stream.name, filter.name, err)
 				}
 				filter.compiledRegex = append(filter.compiledRegex, *compiledRegex)
 			}
