@@ -6,13 +6,13 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
 	"framagit.org/ppom/reaction/logger"
 
 	"github.com/google/go-jsonnet"
-	"golang.org/x/exp/slices"
 )
 
 func (c *Conf) setup() {
