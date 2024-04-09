@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"framagit.org/ppom/reaction/logger"
@@ -198,6 +199,11 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 		if entry.SF != 0 {
 			readSF2int[entry.SF] = SF{entry.Stream, entry.Filter}
+		}
+
+		// check if number of patterns is in sync
+		if len(strings.Split(entry.Pattern, "\x00")) != len(filter.pattern) {
+			continue
 		}
 
 		// check if it hasn't been flushed

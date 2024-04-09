@@ -258,7 +258,7 @@ func MatchesManager() {
 			matchesManagerHandleFlush(fo)
 		case pft = <-matchesC:
 
-			entry := LogEntry{pft.t, 0, strings.Join(strings.Split(pft.p, "\x00"), " / "), pft.f.stream.name, pft.f.name, 0, false}
+			entry := LogEntry{pft.t, 0, pft.p, pft.f.stream.name, pft.f.name, 0, false}
 
 			entry.Exec = matchesManagerHandleMatch(pft)
 
