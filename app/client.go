@@ -170,15 +170,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 		logger.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}
 
-	// Replace \0 joined string with space joined string ("1.2.3.4\0root" -> "1.2.3.4 root")
-	for streamName := range response.ClientStatus {
-		for filterName := range response.ClientStatus[streamName] {
-			for patterns := range response.ClientStatus[streamName][filterName] {
-				text = []byte(strings.ReplaceAll(string(text), strings.Join(strings.Split(patterns, "\x00"), "\\0"), strings.Join(strings.Split(patterns, "\x00"), " ")))
-			}
-		}
-	}
-	fmt.Println(string(text))
+	fmt.Println(strings.ReplaceAll(string(text), "\\0", " "))
 
 	os.Exit(0)
 }
