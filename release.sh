@@ -20,11 +20,11 @@ DATA='{
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/nft46", "name": "nft46 (x86-64)", "link_type": "package"},
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction", "name": "reaction (x86-64)", "link_type": "package"},
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/ip46tables", "name": "ip46tables (x86-64)", "link_type": "package"},
-{"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction.deb", "name": "reaction.deb (x86-64)", "link_type": "package"},
+{"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction_'"${TAG:1}"'-1_amd64.deb", "name": "reaction_'"${TAG:1}"'-1_amd64.deb (x86-64)", "link_type": "package"},
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/nft46.minisig", "name": "nft46.minisig", "link_type": "other"},
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction.minisig", "name": "reaction.minisig", "link_type": "other"},
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/ip46tables.minisig", "name": "ip46tables.minisig", "link_type": "other"},
-{"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction.deb.minisig", "name": "reaction.deb.minisig", "link_type": "other"}
+{"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction_'"${TAG:1}"'-1_amd64.deb.minisig", "name": "reaction_'"${TAG:1}"'-1_amd64.deb.minisig", "link_type": "other"}
 ]}}'
 
 curl \
