@@ -16,6 +16,7 @@ TOKEN="$(rbw get framagit.org token)"
 
 DATA='{
 "tag_name":"'"$TAG"'",
+"description": "**Changes**\n\n**Download**\n\n```bash\nwget https://static.ppom.me/reaction/releases/'"$TAG"'/nft46 \\\n     https://static.ppom.me/reaction/releases/'"$TAG"'/reaction \\\n     https://static.ppom.me/reaction/releases/'"$TAG"'/ip46tables \\\n     https://static.ppom.me/reaction/releases/'"$TAG"'/nft46.minisig \\\n     https://static.ppom.me/reaction/releases/'"$TAG"'/reaction.minisig \\\n     https://static.ppom.me/reaction/releases/'"$TAG"'/ip46tables.minisig\nfor i in nft46 ip46tables reaction; do\n    minisign -VP RWSpLTPfbvllNqRrXUgZzM7mFjLUA7PQioAItz80ag8uU4A2wtoT2DzX -m $i &&\n      rm $i.minisig\ndone\n```\n\n**Debian Installation**\n\n```bash\nwget https://static.ppom.me/reaction/releases/'"$TAG"'/reaction_'"${TAG:1}"'-1_amd64.deb \\\n     https://static.ppom.me/reaction/releases/'"$TAG"'/reaction_'"${TAG:1}"'-1_amd64.deb.minisig\nminisign -VP RWSpLTPfbvllNqRrXUgZzM7mFjLUA7PQioAItz80ag8uU4A2wtoT2DzX -m reaction_'"${TAG:1}"'-1_amd64.deb &&\n  rm reaction_'"${TAG:1}"'-1_amd64.deb.minisig &&\n  apt install ./reaction_'"${TAG:1}"'-1_amd64.deb\n```",
 "assets":{"links":[
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/nft46", "name": "nft46 (x86-64)", "link_type": "package"},
 {"url": "https://static.ppom.me/reaction/releases/'"$TAG"'/reaction", "name": "reaction (x86-64)", "link_type": "package"},
