@@ -440,7 +440,7 @@ func quit(conf *Conf, graceful bool) {
 	// run stop commands
 	stopOk := runCommands(conf.Stop, "stop")
 	// delete pipe
-	err := os.Remove(*SocketPath)
+	err := os.Remove(SocketPath)
 	if err != nil {
 		logger.Println(logger.ERROR, "Failed to remove socket:", err)
 	}

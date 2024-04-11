@@ -11,6 +11,8 @@ import (
 	"framagit.org/ppom/reaction/logger"
 )
 
+var SocketPath string
+
 func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_actionsLock, local_matchesLock *sync.Mutex) ClientStatus {
 	cs := make(ClientStatus)
 	local_matchesLock.Lock()
@@ -55,19 +57,19 @@ func genClientStatus(local_actions ActionsMap, local_matches MatchesMap, local_a
 }
 
 func createOpenSocket() net.Listener {
-	err := os.MkdirAll(path.Dir(*SocketPath), 0755)
+	err := os.MkdirAll(path.Dir(SocketPath), 0755)
 	if err != nil {
 		logger.Fatalln("Failed to create socket directory")
 	}
-	_, err = os.Stat(*SocketPath)
+	_, err = os.Stat(SocketPath)
 	if err == nil {
 		logger.Println(logger.WARN, "socket", SocketPath, "already exists: Is the daemon already running? Deleting.")
-		err = os.Remove(*SocketPath)
+		err = os.Remove(SocketPath)
 		if err != nil {
 			logger.Fatalln("Failed to remove socket:", err)
 		}
 	}
-	ln, err := net.Listen("unix", *SocketPath)
+	ln, err := net.Listen("unix", SocketPath)
 	if err != nil {
 		logger.Fatalln("Failed to create socket:", err)
 	}
