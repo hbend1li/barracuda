@@ -77,14 +77,6 @@ func (csf ClientStatusFlush) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ret)
 }
 
-// end block
-
-func usage(err string) {
-	fmt.Println("Usage: reactionc")
-	fmt.Println("Usage: reactionc flush <PATTERN>")
-	logger.Fatalln(err)
-}
-
 func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	response := SendAndRetrieve(Request{Show, ""})
 	if response.Err != nil {
