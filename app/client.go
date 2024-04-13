@@ -199,13 +199,10 @@ func TestRegex(confFilename, regex, line string) {
 	conf := parseConf(confFilename)
 
 	// Code close to app/startup.go
-	var usedPattern *Pattern
-	for patternName, pattern := range conf.Patterns {
+	var usedPatterns []*Pattern
+	for _, pattern := range conf.Patterns {
 		if strings.Contains(regex, pattern.nameWithBraces) {
-			if usedPattern != nil {
-				logger.Fatalf("Bad regex: Can't mix different patterns (%s, %s) in same line", usedPattern.name, patternName)
-			}
-			usedPattern = pattern
+			usedPatterns = append(usedPatterns, pattern)
 			regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 		}
 	}
@@ -215,15 +212,23 @@ func TestRegex(confFilename, regex, line string) {
 		os.Exit(1)
 	}
 
+	// Code close to app/daemon.go
 	match := func(line string) {
+		var ignored bool
 		if matches := reg.FindStringSubmatch(line); matches != nil {
-			if usedPattern != nil {
-				match := matches[reg.SubexpIndex(usedPattern.name)]
-
-				if usedPattern.notAnIgnore(&match) {
-					fmt.Printf("\033[32mmatching\033[0m [%v]: %v\n", match, line)
+			if usedPatterns != nil {
+				var result []string
+				for _, p := range usedPatterns {
+					match := matches[reg.SubexpIndex(p.name)]
+					result = append(result, match)
+					if !p.notAnIgnore(&match) {
+						ignored = true
+					}
+				}
+				if !ignored {
+					fmt.Printf("\033[32mmatching\033[0m %v: %v\n", WithBrackets(result), line)
 				} else {
-					fmt.Printf("\033[33mignore matching\033[0m [%v]: %v\n", match, line)
+					fmt.Printf("\033[33mignore matching\033[0m %v: %v\n", WithBrackets(result), line)
 				}
 			} else {
 				fmt.Printf("\033[32mmatching\033[0m [%v]:\n", line)
