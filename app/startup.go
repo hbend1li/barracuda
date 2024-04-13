@@ -20,7 +20,14 @@ func (c *Conf) setup() {
 		c.Concurrency = runtime.NumCPU()
 	}
 
-	for patternName := range c.Patterns {
+	// Assure we iterate through c.Patterns map in reproductible order
+	keys := make([]string, 0, len(c.Patterns))
+	for k := range c.Patterns {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	for _, patternName := range keys {
 		pattern := c.Patterns[patternName]
 		pattern.name = patternName
 		pattern.nameWithBraces = fmt.Sprintf("<%s>", pattern.name)
@@ -95,7 +102,9 @@ func (c *Conf) setup() {
 			// Compute Regexes
 			// Look for Patterns inside Regexes
 			for _, regex := range filter.Regex {
-				for _, pattern := range c.Patterns {
+				// iterate through patterns in reproductible order
+				for _, patternName := range keys {
+					pattern := c.Patterns[patternName]
 					if strings.Contains(regex, pattern.nameWithBraces) {
 						if !slices.Contains(filter.pattern, pattern) {
 							filter.pattern = append(filter.pattern, pattern)
