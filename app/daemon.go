@@ -416,7 +416,7 @@ func Daemon(confFilename string) {
 		go StreamManager(stream, endSignals)
 	}
 
-	go SocketManager(conf.Streams)
+	go SocketManager(conf)
 
 	for {
 		select {

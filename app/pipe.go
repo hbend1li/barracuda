@@ -75,7 +75,8 @@ func createOpenSocket() net.Listener {
 }
 
 // Handle connections
-func SocketManager(streams map[string]*Stream) {
+//func SocketManager(streams map[string]*Stream) {
+func SocketManager(conf *Conf) {
 	ln := createOpenSocket()
 	defer ln.Close()
 	for {
@@ -108,6 +109,8 @@ func SocketManager(streams map[string]*Stream) {
 
 				var lock sync.Mutex
 				response.ClientStatus = genClientStatus(<-actionsC.ret, <-matchesC.ret, &lock, &lock)
+			case Config:
+				response.Config = *conf
 			default:
 				logger.Println(logger.ERROR, "Invalid Message from cli: unrecognised Request type")
 				return

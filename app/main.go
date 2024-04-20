@@ -90,9 +90,12 @@ func basicUsage() {
 ` + bold + `reaction example-conf` + reset + `
   # print a configuration file example
 
-` + bold + `reaction show` + reset + `
-  # show current matches and which actions are still to be run
+` + bold + `reaction show` + reset + ` [TARGET...]
+  # show current matches and which actions are still to be run for the specified TARGET(s)
   # (e.g know what is currenly banned)
+  # e.g. reaction show -p 192.168.1.1
+  # Specify TARGETs without -p when matching multiple pattern
+  # e.g. reaction show "ip=192\.168\..*" login=root
 
   # options:
     -s/--socket SOCKET               # path to the client-daemon communication socket
@@ -169,7 +172,7 @@ func Main(version, commit string) {
 		queryFormat := addFormatFlag(f)
 		limit := addLimitFlag(f)
 		pattern := addPatternFlag(f)
-		subCommandParse(f, 0)
+		subCommandParse(f, -1)
 		if *queryFormat != "yaml" && *queryFormat != "json" {
 			logger.Fatalln("only yaml and json formats are supported")
 			f.PrintDefaults()
@@ -193,7 +196,13 @@ func Main(version, commit string) {
 				logger.Fatalln("-p/--pattern: ", err)
 			}
 		}
-		ClientShow(*queryFormat, stream, filter, regex)
+		// check every f.Args have format k=v
+		for _, kv := range f.Args() {
+			if len(strings.Split(kv, "=")) != 2 {
+				logger.Fatalln("args should be in pattern=value format")
+			}
+		}
+		ClientShow(*queryFormat, stream, filter, regex, f.Args())
 
 	case "flush":
 		SocketPath = addSocketFlag(f)

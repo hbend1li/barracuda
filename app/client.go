@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"framagit.org/ppom/reaction/logger"
@@ -15,8 +16,9 @@ import (
 )
 
 const (
-	Show  = 0
-	Flush = 1
+	Show   = 0
+	Flush  = 1
+	Config = 2
 )
 
 type Request struct {
@@ -27,6 +29,7 @@ type Request struct {
 type Response struct {
 	Err          error
 	ClientStatus ClientStatus
+	Config       Conf
 }
 
 func SendAndRetrieve(data Request) Response {
@@ -59,6 +62,14 @@ type MapPatternStatusFlush MapPatternStatus
 type ClientStatus map[string]map[string]MapPatternStatus
 type ClientStatusFlush ClientStatus
 
+type CompiledPattern struct{
+	Name          string
+	Regex         string
+	compiledRegex *regexp.Regexp
+}
+
+type PCM map[string]CompiledPattern
+
 func (mps MapPatternStatusFlush) MarshalJSON() ([]byte, error) {
 	for _, v := range mps {
 		return json.Marshal(v)
@@ -85,7 +96,7 @@ func usage(err string) {
 	logger.Fatalln(err)
 }
 
-func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
+func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern []string) {
 	response := SendAndRetrieve(Request{Show, ""})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
@@ -146,6 +157,57 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 						}
 					}
 					if !pmatch {
+						delete(response.ClientStatus[streamName][filterName], patterns)
+					}
+				}
+				if len(response.ClientStatus[streamName][filterName]) == 0 {
+					delete(response.ClientStatus[streamName], filterName)
+				}
+			}
+			if len(response.ClientStatus[streamName]) == 0 {
+				delete(response.ClientStatus, streamName)
+			}
+		}
+	}
+
+	// Limit to kvpatterns
+	if kvpattern != nil {
+		// get ordered config.Patterns
+		responseConfig := SendAndRetrieve(Request{Config, ""})
+		if responseConfig.Err != nil {
+			logger.Fatalln("Received error from daemon:", responseConfig.Err)
+		}
+		// make sure we iterate responseConfig.Config.Patterns in reproductible order
+		keys := make([]string, 0, len(responseConfig.Config.Patterns))
+		for k := range responseConfig.Config.Patterns {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+
+		// Build map from kvpattern
+		args := make(PCM)
+		for _, p := range kvpattern {
+			// p syntax already checked in Main
+			a := strings.Split(p, "=")
+			compiled, err := regexp.Compile(fmt.Sprintf("^%v$", a[1]))
+			if err != nil {
+				logger.Fatalf("Bad argument: %v: %v", p, err)
+			}
+			args[a[0]] = CompiledPattern{Name: a[0], Regex: a[1], compiledRegex: compiled}
+		}
+
+		for streamName := range response.ClientStatus {
+			for filterName := range response.ClientStatus[streamName] {
+				for patterns := range response.ClientStatus[streamName][filterName] {
+					pmatch := 0
+					for ip, p := range patterns.Split() {
+						if v, found := args[keys[ip]]; found {
+							if v.compiledRegex.Match([]byte(p)) {
+								pmatch++
+							}
+						}
+					}
+					if pmatch != len(kvpattern) {
 						delete(response.ClientStatus[streamName][filterName], patterns)
 					}
 				}
