@@ -47,5 +47,5 @@ install: all
 	install -m755 nft46 $(DESTDIR)$(BINDIR)
 
 install_systemd: install
-	install -m644 config/reaction.debian.service $(SYSTEMDDIR)/system/reaction.service
+	install -m644 config/reaction.example.service $(SYSTEMDDIR)/system/reaction.service
 	sed -i 's#/usr/bin#$(DESTDIR)$(BINDIR)#' $(SYSTEMDDIR)/system/reaction.service

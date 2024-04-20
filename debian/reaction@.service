@@ -1,3 +1,4 @@
+# vim: ft=systemd
 [Unit]
 Description=A daemon that scans program outputs for repeated patterns, and takes action.
 Documentation=https://framagit.org/ppom/reaction-wiki
