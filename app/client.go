@@ -21,7 +21,7 @@ const (
 
 type Request struct {
 	Request int
-	Pattern string
+	Pattern Match
 }
 
 type Response struct {
@@ -53,7 +53,7 @@ type PatternStatus struct {
 	Matches int                 `json:"matches,omitempty"`
 	Actions map[string][]string `json:"actions,omitempty"`
 }
-type MapPatternStatus map[string]*PatternStatus
+type MapPatternStatus map[Match]*PatternStatus
 type MapPatternStatusFlush MapPatternStatus
 
 type ClientStatus map[string]map[string]MapPatternStatus
@@ -130,9 +130,15 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	if regex != nil {
 		for streamName := range response.ClientStatus {
 			for filterName := range response.ClientStatus[streamName] {
-				for patternName := range response.ClientStatus[streamName][filterName] {
-					if !regex.MatchString(patternName) {
-						delete(response.ClientStatus[streamName][filterName], patternName)
+				for patterns := range response.ClientStatus[streamName][filterName] {
+					pmatch := false
+					for _, p := range patterns.Split() {
+						if regex.MatchString(p) {
+							pmatch = true
+						}
+					}
+					if !pmatch {
+						delete(response.ClientStatus[streamName][filterName], patterns)
 					}
 				}
 				if len(response.ClientStatus[streamName][filterName]) == 0 {
@@ -155,12 +161,14 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp) {
 	if err != nil {
 		logger.Fatalln("Failed to convert daemon binary response to text format:", err)
 	}
-	fmt.Println(string(text))
+
+	fmt.Println(strings.ReplaceAll(string(text), "\\0", " "))
+
 	os.Exit(0)
 }
 
-func ClientFlush(pattern, streamfilter, format string) {
-	response := SendAndRetrieve(Request{Flush, pattern})
+func ClientFlush(patterns []string, streamfilter, format string) {
+	response := SendAndRetrieve(Request{Flush, JoinMatch(patterns)})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 		os.Exit(1)
@@ -179,17 +187,14 @@ func ClientFlush(pattern, streamfilter, format string) {
 	os.Exit(0)
 }
 
-func Match(confFilename, regex, line string) {
+func TestRegex(confFilename, regex, line string) {
 	conf := parseConf(confFilename)
 
 	// Code close to app/startup.go
-	var usedPattern *Pattern
-	for patternName, pattern := range conf.Patterns {
+	var usedPatterns []*Pattern
+	for _, pattern := range conf.Patterns {
 		if strings.Contains(regex, pattern.nameWithBraces) {
-			if usedPattern != nil {
-				logger.Fatalf("Bad regex: Can't mix different patterns (%s, %s) in same line", usedPattern.name, patternName)
-			}
-			usedPattern = pattern
+			usedPatterns = append(usedPatterns, pattern)
 			regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 		}
 	}
@@ -199,15 +204,23 @@ func Match(confFilename, regex, line string) {
 		os.Exit(1)
 	}
 
+	// Code close to app/daemon.go
 	match := func(line string) {
+		var ignored bool
 		if matches := reg.FindStringSubmatch(line); matches != nil {
-			if usedPattern != nil {
-				match := matches[reg.SubexpIndex(usedPattern.name)]
-
-				if usedPattern.notAnIgnore(&match) {
-					fmt.Printf("\033[32mmatching\033[0m [%v]: %v\n", match, line)
+			if usedPatterns != nil {
+				var result []string
+				for _, p := range usedPatterns {
+					match := matches[reg.SubexpIndex(p.name)]
+					result = append(result, match)
+					if !p.notAnIgnore(&match) {
+						ignored = true
+					}
+				}
+				if !ignored {
+					fmt.Printf("\033[32mmatching\033[0m %v: %v\n", WithBrackets(result), line)
 				} else {
-					fmt.Printf("\033[33mignore matching\033[0m [%v]: %v\n", match, line)
+					fmt.Printf("\033[33mignore matching\033[0m %v: %v\n", WithBrackets(result), line)
 				}
 			} else {
 				fmt.Printf("\033[32mmatching\033[0m [%v]:\n", line)

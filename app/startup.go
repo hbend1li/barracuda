@@ -3,10 +3,10 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,7 +20,14 @@ func (c *Conf) setup() {
 		c.Concurrency = runtime.NumCPU()
 	}
 
-	for patternName := range c.Patterns {
+	// Assure we iterate through c.Patterns map in reproductible order
+	keys := make([]string, 0, len(c.Patterns))
+	for k := range c.Patterns {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	for _, patternName := range keys {
 		pattern := c.Patterns[patternName]
 		pattern.name = patternName
 		pattern.nameWithBraces = fmt.Sprintf("<%s>", pattern.name)
@@ -45,7 +52,7 @@ func (c *Conf) setup() {
 			// Enclose the regex to make sure that it matches the whole detected string
 			compiledRegex, err := regexp.Compile("^" + regex + "$")
 			if err != nil {
-				log.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, pattern.name, err)
+				logger.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, pattern.name, err)
 			}
 
 			pattern.compiledIgnoreRegex = append(pattern.compiledIgnoreRegex, *compiledRegex)
@@ -95,27 +102,19 @@ func (c *Conf) setup() {
 			// Compute Regexes
 			// Look for Patterns inside Regexes
 			for _, regex := range filter.Regex {
-				for patternName, pattern := range c.Patterns {
+				// iterate through patterns in reproductible order
+				for _, patternName := range keys {
+					pattern := c.Patterns[patternName]
 					if strings.Contains(regex, pattern.nameWithBraces) {
-
-						if filter.pattern == nil {
-							filter.pattern = pattern
-						} else if filter.pattern == pattern {
-							// no op
-						} else {
-							logger.Fatalf(
-								"Bad configuration: Can't mix different patterns (%s, %s) in same filter (%s.%s)\n",
-								filter.pattern.name, patternName, streamName, filterName,
-							)
+						if !slices.Contains(filter.pattern, pattern) {
+							filter.pattern = append(filter.pattern, pattern)
 						}
-
-						// FIXME should go in the `if filter.pattern == nil`?
 						regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 					}
 				}
 				compiledRegex, err := regexp.Compile(regex)
 				if err != nil {
-					log.Fatalf("%vBad configuration: regex of filter %s.%s: %v", logger.FATAL, stream.name, filter.name, err)
+					logger.Fatalf("Bad configuration: regex of filter %s.%s: %v", stream.name, filter.name, err)
 				}
 				filter.compiledRegex = append(filter.compiledRegex, *compiledRegex)
 			}

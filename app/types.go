@@ -2,8 +2,10 @@ package app
 
 import (
 	"encoding/gob"
+	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -42,7 +44,7 @@ type Filter struct {
 
 	Regex         []string        `json:"regex"`
 	compiledRegex []regexp.Regexp `json:"-"`
-	pattern       *Pattern        `json:"-"`
+	pattern       []*Pattern      `json:"-"`
 
 	Retry         int           `json:"retry"`
 	RetryPeriod   string        `json:"retryperiod"`
@@ -67,7 +69,7 @@ type Action struct {
 type LogEntry struct {
 	T              time.Time
 	S              int64
-	Pattern        string
+	Pattern        Match
 	Stream, Filter string
 	SF             int
 	Exec           bool
@@ -86,33 +88,58 @@ type WriteDB struct {
 type MatchesMap map[PF]map[time.Time]struct{}
 type ActionsMap map[PA]map[time.Time]struct{}
 
+// This is a "\x00" Joined string
+// which contains all matches on a line.
+type Match string
+
+func (m *Match) Split() []string {
+	return strings.Split(string(*m), "\x00")
+}
+func JoinMatch(mm []string) Match {
+	return Match(strings.Join(mm, "\x00"))
+}
+func WithBrackets(mm []string) string {
+	var b strings.Builder
+	for _, match := range mm {
+		fmt.Fprintf(&b, "[%s]", match)
+	}
+	return b.String()
+}
+
 // Helper structs made to carry information
+// Stream, Filter
 type SF struct{ s, f string }
-type PSF struct{ p, s, f string }
+
+// Pattern, Stream, Filter
+type PSF struct {
+	p    Match
+	s, f string
+}
+
 type PF struct {
-	p string
+	p Match
 	f *Filter
 }
 type PFT struct {
-	p string
+	p Match
 	f *Filter
 	t time.Time
 }
 type PA struct {
-	p string
+	p Match
 	a *Action
 }
 type PAT struct {
-	p string
+	p Match
 	a *Action
 	t time.Time
 }
 
 type FlushMatchOrder struct {
-	p   string
+	p   Match
 	ret chan MatchesMap
 }
 type FlushActionOrder struct {
-	p   string
+	p   Match
 	ret chan ActionsMap
 }

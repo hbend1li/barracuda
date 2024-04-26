@@ -60,7 +60,8 @@ func subCommandParse(f *flag.FlagSet, maxRemainingArgs int) {
 		basicUsage()
 		os.Exit(0)
 	}
-	if len(f.Args()) > maxRemainingArgs {
+	// -1 = no limit to remaining args
+	if maxRemainingArgs > -1 && len(f.Args()) > maxRemainingArgs {
 		fmt.Printf("ERROR unrecognized argument(s): %v\n", f.Args()[maxRemainingArgs:])
 		basicUsage()
 		os.Exit(1)
@@ -99,10 +100,10 @@ func basicUsage() {
     -l/--limit STREAM[.FILTER]       # only show items related to this STREAM (or STREAM.FILTER)
     -p/--pattern PATTERN             # only show items matching the PATTERN regex
 
-` + bold + `reaction flush` + reset + ` TARGET
-  # remove currently active matches and run currently pending actions for the specified TARGET
+` + bold + `reaction flush` + reset + ` TARGET [TARGET...]
+  # remove currently active matches and run currently pending actions for the specified TARGET(s)
   # (then show flushed matches and actions)
-  # e.g. reaction flush 192.168.1.1
+  # e.g. reaction flush 192.168.1.1 root
 
   # options:
     -s/--socket SOCKET               # path to the client-daemon communication socket
@@ -198,7 +199,7 @@ func Main(version, commit string) {
 		SocketPath = addSocketFlag(f)
 		queryFormat := addFormatFlag(f)
 		limit := addLimitFlag(f)
-		subCommandParse(f, 1)
+		subCommandParse(f, -1)
 		if *queryFormat != "yaml" && *queryFormat != "json" {
 			logger.Fatalln("only yaml and json formats are supported")
 			f.PrintDefaults()
@@ -213,7 +214,7 @@ func Main(version, commit string) {
 			logger.Fatalln("for now, -l/--limit is not supported")
 			os.Exit(1)
 		}
-		ClientFlush(f.Arg(0), *limit, *queryFormat)
+		ClientFlush(f.Args(), *limit, *queryFormat)
 
 	case "test-regex":
 		// socket not needed, no interaction with the daemon
@@ -227,7 +228,7 @@ func Main(version, commit string) {
 			basicUsage()
 			os.Exit(1)
 		}
-		Match(*confFilename, f.Arg(0), f.Arg(1))
+		TestRegex(*confFilename, f.Arg(0), f.Arg(1))
 
 	default:
 		logger.Fatalf("subcommand %v not recognized. Try `reaction help`", os.Args[1])

@@ -3,17 +3,25 @@
     num: {
       regex: '[0-9]+',
       ignore: ['1'],
-      ignoreregex: ['2.?'],
+      // ignoreregex: ['2.?'],
+    },
+    letter: {
+      regex: '[a-z]+',
+      ignore: ['b'],
+      // ignoreregex: ['b.?'],
     },
   },
 
   streams: {
     tailDown1: {
-      cmd: ['sh', '-c', "echo 1 2 3 4 5 11 12 21 22 33 | tr ' ' '\n' | while read i; do sleep 1; echo found $i; done"],
+      cmd: ['sh', '-c', "echo 1_a 2_a 3_a a_1 a_2 a_3 | tr ' ' '\n' | while read i; do sleep 1; echo found $i; done"],
       filters: {
         findIP: {
-          regex: ['^found <num>$'],
-          retry: 1,
+          regex: [
+            '^found <num>_<letter>$',
+            '^found <letter>_<num>$',
+          ],
+          retry: 2,
           retryperiod: '30s',
           actions: {
             damn: {

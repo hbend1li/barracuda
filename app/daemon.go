@@ -77,17 +77,21 @@ func (p *Pattern) notAnIgnore(match *string) bool {
 }
 
 // Whether one of the filter's regexes is matched on a line
-func (f *Filter) match(line *string) string {
+func (f *Filter) match(line *string) Match {
 	for _, regex := range f.compiledRegex {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
-
 			if f.pattern != nil {
-				match := matches[regex.SubexpIndex(f.pattern.name)]
-
-				if f.pattern.notAnIgnore(&match) {
-					logger.Printf(logger.INFO, "%s.%s: match [%v]\n", f.stream.name, f.name, match)
-					return match
+				var result []string
+				for _, p := range f.pattern {
+					match := matches[regex.SubexpIndex(p.name)]
+					if p.notAnIgnore(&match) {
+						result = append(result, match)
+					}
+				}
+				if len(result) == len(f.pattern) {
+					logger.Printf(logger.INFO, "%s.%s: match %s", f.stream.name, f.name, WithBrackets(result))
+					return JoinMatch(result)
 				}
 			} else {
 				logger.Printf(logger.INFO, "%s.%s: match [.]\n", f.stream.name, f.name)
@@ -99,22 +103,26 @@ func (f *Filter) match(line *string) string {
 	return ""
 }
 
-func (f *Filter) sendActions(match string, at time.Time) {
+func (f *Filter) sendActions(match Match, at time.Time) {
 	for _, a := range f.Actions {
 		actionsC <- PAT{match, a, at.Add(a.afterDuration)}
 	}
 }
 
-func (a *Action) exec(match string) {
+func (a *Action) exec(match Match) {
 	defer wgActions.Done()
 
 	var computedCommand []string
 
 	if a.filter.pattern != nil {
 		computedCommand = make([]string, 0, len(a.Cmd))
+		matches := match.Split()
 
 		for _, item := range a.Cmd {
-			computedCommand = append(computedCommand, strings.ReplaceAll(item, a.filter.pattern.nameWithBraces, match))
+			for i, p := range a.filter.pattern {
+				item = strings.ReplaceAll(item, p.nameWithBraces, matches[i])
+			}
+			computedCommand = append(computedCommand, item)
 		}
 	} else {
 		computedCommand = a.Cmd
@@ -153,7 +161,7 @@ func ActionsManager(concurrency int) {
 			}
 		}()
 	}
-	execAction := func(a *Action, p string) {
+	execAction := func(a *Action, p Match) {
 		wgActions.Add(1)
 		execActionsC <- PA{p, a}
 	}
@@ -274,7 +282,7 @@ func matchesManagerHandleMatch(pft PFT) bool {
 	matchesLock.Lock()
 	defer matchesLock.Unlock()
 
-	filter, pattern, then := pft.f, pft.p, pft.t
+	filter, patterns, then := pft.f, pft.p, pft.t
 	pf := PF{pft.p, pft.f}
 
 	if filter.Retry > 1 {
@@ -299,7 +307,7 @@ func matchesManagerHandleMatch(pft PFT) bool {
 
 	if filter.Retry <= 1 || len(matches[pf]) >= filter.Retry {
 		delete(matches, pf)
-		filter.sendActions(pattern, then)
+		filter.sendActions(patterns, then)
 		return true
 	}
 	return false
