@@ -68,7 +68,7 @@ type CompiledPattern struct{
 	compiledRegex *regexp.Regexp
 }
 
-type PCM map[string]CompiledPattern
+type CPM map[string]CompiledPattern
 
 func (mps MapPatternStatusFlush) MarshalJSON() ([]byte, error) {
 	for _, v := range mps {
@@ -172,20 +172,13 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern [
 
 	// Limit to kvpatterns
 	if kvpattern != nil {
-		// get ordered config.Patterns
+		// Get pattern indices (as stored in DB) from config
 		responseConfig := SendAndRetrieve(Request{Config, ""})
 		if responseConfig.Err != nil {
 			logger.Fatalln("Received error from daemon:", responseConfig.Err)
 		}
-		// make sure we iterate responseConfig.Config.Patterns in reproductible order
-		keys := make([]string, 0, len(responseConfig.Config.Patterns))
-		for k := range responseConfig.Config.Patterns {
-			keys = append(keys, k)
-		}
-		slices.Sort(keys)
-
 		// Build map from kvpattern
-		args := make(PCM)
+		args := make(CPM)
 		for _, p := range kvpattern {
 			// p syntax already checked in Main
 			a := strings.Split(p, "=")
@@ -201,7 +194,8 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern [
 				for patterns := range response.ClientStatus[streamName][filterName] {
 					pmatch := 0
 					for ip, p := range patterns.Split() {
-						if v, found := args[keys[ip]]; found {
+						// get pattern name from stream.filter.pattern (which was alphabetically sorted at startup)
+						if v, found := args[responseConfig.Config.Streams[streamName].Filters[filterName].Pattern[ip].Name]; found {
 							if v.compiledRegex.Match([]byte(p)) {
 								pmatch++
 							}
@@ -237,7 +231,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern [
 	os.Exit(0)
 }
 
-func ClientFlush(patterns []string, streamfilter, format string) {
+func ClientFlush(patterns []string, stream, filter, format string) {
 	response := SendAndRetrieve(Request{Flush, JoinMatch(patterns)})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
@@ -281,7 +275,7 @@ func TestRegex(confFilename, regex, line string) {
 			if usedPatterns != nil {
 				var result []string
 				for _, p := range usedPatterns {
-					match := matches[reg.SubexpIndex(p.name)]
+					match := matches[reg.SubexpIndex(p.Name)]
 					result = append(result, match)
 					if !p.notAnIgnore(&match) {
 						ignored = true
