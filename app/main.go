@@ -111,6 +111,7 @@ func basicUsage() {
   # options:
     -s/--socket SOCKET               # path to the client-daemon communication socket
     -f/--format yaml|json            # (default: yaml)
+    -l/--limit STREAM.FILTER         # flush only items related to this STREAM.FILTER
 
 ` + bold + `reaction test-regex` + reset + ` REGEX LINE       # test REGEX against LINE
 cat FILE | ` + bold + `reaction test-regex` + reset + ` REGEX # test REGEX against each line of FILE
@@ -215,15 +216,20 @@ func Main(version, commit string) {
 			os.Exit(1)
 		}
 		if f.Arg(0) == "" {
-			logger.Fatalln("subcommand flush takes one TARGET argument")
+			logger.Fatalln("subcommand flush takes at least one TARGET argument")
 			basicUsage()
 			os.Exit(1)
 		}
+		stream, filter := "", ""
 		if *limit != "" {
-			logger.Fatalln("for now, -l/--limit is not supported")
-			os.Exit(1)
+			splitSF := strings.Split(*limit, ".")
+			if len(splitSF) != 2 {
+				logger.Fatalln("-l/--limit: only one . separator is supported")
+			}
+			stream = splitSF[0]
+			filter = splitSF[1]
 		}
-		ClientFlush(f.Args(), *limit, *queryFormat)
+		ClientFlush(f.Args(), stream, filter, *queryFormat)
 
 	case "test-regex":
 		// socket not needed, no interaction with the daemon
