@@ -24,7 +24,7 @@ type Pattern struct {
 	IgnoreRegex         []string        `json:"ignoreregex"`
 	compiledIgnoreRegex []regexp.Regexp `json:"-"`
 
-	name           string `json:"-"`
+	Name           string `json:"-"`
 	nameWithBraces string `json:"-"`
 }
 
@@ -44,7 +44,7 @@ type Filter struct {
 
 	Regex         []string        `json:"regex"`
 	compiledRegex []regexp.Regexp `json:"-"`
-	pattern       []*Pattern      `json:"-"`
+	Pattern       []*Pattern      `json:"-"`
 
 	Retry         int           `json:"retry"`
 	RetryPeriod   string        `json:"retryperiod"`

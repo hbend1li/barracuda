@@ -201,7 +201,7 @@ func rotateDB(c *Conf, logDec *gob.Decoder, flushDec *gob.Decoder, logEnc *gob.E
 		}
 
 		// check if number of patterns is in sync
-		if len(entry.Pattern.Split()) != len(filter.pattern) {
+		if len(entry.Pattern.Split()) != len(filter.Pattern) {
 			continue
 		}
 

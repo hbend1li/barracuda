@@ -29,8 +29,8 @@ func (c *Conf) setup() {
 
 	for _, patternName := range keys {
 		pattern := c.Patterns[patternName]
-		pattern.name = patternName
-		pattern.nameWithBraces = fmt.Sprintf("<%s>", pattern.name)
+		c.Patterns[patternName].Name = patternName
+		pattern.nameWithBraces = fmt.Sprintf("<%s>", c.Patterns[patternName].Name)
 
 		if pattern.Regex == "" {
 			logger.Fatalf("Bad configuration: pattern's regex %v is empty!", patternName)
@@ -52,7 +52,7 @@ func (c *Conf) setup() {
 			// Enclose the regex to make sure that it matches the whole detected string
 			compiledRegex, err := regexp.Compile("^" + regex + "$")
 			if err != nil {
-				logger.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, pattern.name, err)
+				logger.Fatalf("%vBad configuration: in ignoreregex of pattern %s: %v", logger.FATAL, c.Patterns[patternName].Name, err)
 			}
 
 			pattern.compiledIgnoreRegex = append(pattern.compiledIgnoreRegex, *compiledRegex)
@@ -106,8 +106,8 @@ func (c *Conf) setup() {
 				for _, patternName := range keys {
 					pattern := c.Patterns[patternName]
 					if strings.Contains(regex, pattern.nameWithBraces) {
-						if !slices.Contains(filter.pattern, pattern) {
-							filter.pattern = append(filter.pattern, pattern)
+						if !slices.Contains(filter.Pattern, pattern) {
+							stream.Filters[filterName].Pattern = append(filter.Pattern, pattern)
 						}
 						regex = strings.Replace(regex, pattern.nameWithBraces, pattern.Regex, 1)
 					}

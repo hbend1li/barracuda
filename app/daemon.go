@@ -81,15 +81,15 @@ func (f *Filter) match(line *string) Match {
 	for _, regex := range f.compiledRegex {
 
 		if matches := regex.FindStringSubmatch(*line); matches != nil {
-			if f.pattern != nil {
+			if f.Pattern != nil {
 				var result []string
-				for _, p := range f.pattern {
-					match := matches[regex.SubexpIndex(p.name)]
+				for _, p := range f.Pattern {
+					match := matches[regex.SubexpIndex(p.Name)]
 					if p.notAnIgnore(&match) {
 						result = append(result, match)
 					}
 				}
-				if len(result) == len(f.pattern) {
+				if len(result) == len(f.Pattern) {
 					logger.Printf(logger.INFO, "%s.%s: match %s", f.stream.name, f.name, WithBrackets(result))
 					return JoinMatch(result)
 				}
@@ -114,12 +114,12 @@ func (a *Action) exec(match Match) {
 
 	var computedCommand []string
 
-	if a.filter.pattern != nil {
+	if a.filter.Pattern != nil {
 		computedCommand = make([]string, 0, len(a.Cmd))
 		matches := match.Split()
 
 		for _, item := range a.Cmd {
-			for i, p := range a.filter.pattern {
+			for i, p := range a.filter.Pattern {
 				item = strings.ReplaceAll(item, p.nameWithBraces, matches[i])
 			}
 			computedCommand = append(computedCommand, item)
