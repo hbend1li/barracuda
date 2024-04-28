@@ -190,6 +190,10 @@ ExecStart=/usr/bin/reaction start -c /etc/reaction.yml
 - [ package ](https://framagit.org/ppom/nixos/-/blob/main/pkgs/reaction/default.nix)
 - [ module ](https://framagit.org/ppom/nixos/-/blob/main/modules/common/reaction.nix)
 
+#### OpenBSD
+
+[wiki](https://reaction.ppom.me/configs/openbsd.html)
+
 ### Compilation
 
 You'll need the go (>= 1.20) toolchain for reaction and a c compiler for ip46tables.
