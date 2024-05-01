@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"slices"
 	"strings"
 
 	"framagit.org/ppom/reaction/logger"
@@ -23,6 +22,8 @@ const (
 
 type Request struct {
 	Request int
+	Stream  string
+	Filter  string
 	Pattern Match
 }
 
@@ -67,7 +68,6 @@ type CompiledPattern struct{
 	Regex         string
 	compiledRegex *regexp.Regexp
 }
-
 type CPM map[string]CompiledPattern
 
 func (mps MapPatternStatusFlush) MarshalJSON() ([]byte, error) {
@@ -97,7 +97,7 @@ func usage(err string) {
 }
 
 func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern []string) {
-	response := SendAndRetrieve(Request{Show, ""})
+	response := SendAndRetrieve(Request{Show, stream, filter, ""})
 	if response.Err != nil {
 		logger.Fatalln("Received error from daemon:", response.Err)
 	}
@@ -173,7 +173,7 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern [
 	// Limit to kvpatterns
 	if kvpattern != nil {
 		// Get pattern indices (as stored in DB) from config
-		responseConfig := SendAndRetrieve(Request{Config, ""})
+		responseConfig := SendAndRetrieve(Request{Config, stream, filter, ""})
 		if responseConfig.Err != nil {
 			logger.Fatalln("Received error from daemon:", responseConfig.Err)
 		}
@@ -231,24 +231,101 @@ func ClientShow(format, stream, filter string, regex *regexp.Regexp, kvpattern [
 	os.Exit(0)
 }
 
+// TODO : Show values we just flushed - for now we got no details :
+/*
+ * % ./reaction flush -l ssh.failedlogin login=".*t"
+ * ssh:
+ *  failedlogin:
+ *    actions:
+ *      unban:
+ *      - "2024-04-30 15:27:28"
+ *      - "2024-04-30 15:27:28"
+ *      - "2024-04-30 15:27:28"
+ *      - "2024-04-30 15:27:28"
+ *
+ */
 func ClientFlush(patterns []string, stream, filter, format string) {
-	response := SendAndRetrieve(Request{Flush, JoinMatch(patterns)})
-	if response.Err != nil {
-		logger.Fatalln("Received error from daemon:", response.Err)
+	responseConfig := SendAndRetrieve(Request{Config, stream, filter, ""})
+	if responseConfig.Err != nil {
+		logger.Fatalln("Received error from daemon:", responseConfig.Err)
+	}
+
+	if _, found := responseConfig.Config.Streams[stream].Filters[filter]; filter != "" && found == false {
+		logger.Println(logger.WARN, "No matching stream.filter items found. This does not mean it doesn't exist, maybe it just didn't receive any match.")
 		os.Exit(1)
 	}
-	var text []byte
-	var err error
-	if format == "json" {
-		text, err = json.MarshalIndent(ClientStatusFlush(response.ClientStatus), "", "  ")
-	} else {
-		text, err = yaml.Marshal(ClientStatusFlush(response.ClientStatus))
+
+	processFilter := func(patterns []string, stream, filter, format string) {
+		fpqty := len(responseConfig.Config.Streams[stream].Filters[filter].Pattern)
+
+		if len(patterns) > fpqty {
+			logger.Fatalln("filter have 1 pattern")
+		}
+
+		for _, kv := range patterns {
+			if len(strings.Split(kv, "=")) != 2 && fpqty > 1 {
+				logger.Fatalln("args should be in pattern=value format using more than one pattern in filter")
+			}
+		}
+
+		// Transform arg to k=v
+		if fpqty == 1 && len(strings.Split(patterns[0], "=")) == 1 {
+			patterns[0] = strings.Join([]string{responseConfig.Config.Streams[stream].Filters[filter].Pattern[0].Name, patterns[0]}, "=")
+		}
+
+		// arg pattern map
+		pmap := make(map[string]string)
+		for _, p := range patterns {
+			a := strings.Split(p, "=")
+			pmap[a[0]] = a[1]
+		}
+
+		// Check every arg pattern exist in filter
+		for k, _ := range pmap {
+			found := false
+			for _, fp := range responseConfig.Config.Streams[stream].Filters[filter].Pattern {
+				if strings.EqualFold(k, fp.Name) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				logger.Fatalf("pattern <%s> not found in filter %s.%s\n", k, stream, filter)
+			}
+		}
+
+		// Order arg patterns before JoinMatch
+		var orderedPatterns []string
+		for _, p := range responseConfig.Config.Streams[stream].Filters[filter].Pattern {
+			if v, found := pmap[p.Name]; found {
+				orderedPatterns = append(orderedPatterns, v)
+			} else {
+				orderedPatterns = append(orderedPatterns, "")
+			}
+		}
+		response := SendAndRetrieve(Request{Flush, stream, filter, JoinMatch(orderedPatterns)})
+		if response.Err != nil {
+			logger.Fatalln(logger.ERROR, "Received error from daemon:", response.Err)
+		}
+
+		var text []byte
+		var err error
+		if format == "json" {
+			text, err = json.MarshalIndent(ClientStatusFlush(response.ClientStatus), "", "  ")
+		} else {
+			text, err = yaml.Marshal(ClientStatusFlush(response.ClientStatus))
+		}
+		if err != nil {
+			logger.Fatalln("Failed to convert daemon binary response to text format:", err)
+		}
+		fmt.Println(string(text))
 	}
-	if err != nil {
-		logger.Fatalln("Failed to convert daemon binary response to text format:", err)
+
+	for streamName := range responseConfig.Config.Streams {
+		for filterName := range responseConfig.Config.Streams[streamName].Filters {
+			processFilter(patterns, streamName, filterName, format)
+		}
 	}
-	fmt.Println(string(text))
-	os.Exit(0)
 }
 
 func TestRegex(confFilename, regex, line string) {
