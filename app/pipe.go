@@ -100,9 +100,11 @@ func SocketManager(conf *Conf) {
 			case Show:
 				response.ClientStatus = genClientStatus(actions, matches, &actionsLock, &matchesLock)
 			case Flush:
-				le := LogEntry{time.Now(), 0, request.Pattern, "", "", 0, false}
+				le := LogEntry{time.Now(), 0, request.Pattern, request.Stream, request.Filter, 0, false}
+
 				matchesC := FlushMatchOrder{request.Pattern, make(chan MatchesMap)}
 				actionsC := FlushActionOrder{request.Pattern, make(chan ActionsMap)}
+
 				flushToMatchesC <- matchesC
 				flushToActionsC <- actionsC
 				flushToDatabaseC <- le
