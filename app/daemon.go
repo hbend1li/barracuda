@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -200,15 +201,23 @@ func ActionsManager(concurrency int) {
 			execAction(action, pattern)
 		case fo := <-flushToActionsC:
 			ret := make(ActionsMap)
+			match := 0
 			actionsLock.Lock()
 			for pa := range actions {
-				if pa.p == fo.p {
+				ppa, pfo := pa.p.Split(), fo.p.Split()
+				for i, p := range ppa {
+					if m, err := regexp.MatchString(pfo[i], p); err == nil && m == true {
+						match++
+					}
+				}
+				if match == len(ppa) {
 					for range actions[pa] {
 						execAction(pa.a, pa.p)
 					}
 					ret[pa] = actions[pa]
 					delete(actions, pa)
 				}
+				match = 0
 			}
 			actionsLock.Unlock()
 			fo.ret <- ret
@@ -263,14 +272,22 @@ func MatchesManager() {
 
 func matchesManagerHandleFlush(fo FlushMatchOrder) {
 	ret := make(MatchesMap)
+	match := 0
 	matchesLock.Lock()
 	for pf := range matches {
-		if fo.p == pf.p {
+		ppf, pfo := pf.p.Split(), fo.p.Split()
+		for i, p := range ppf {
+			if m, err := regexp.MatchString(pfo[i], p); err == nil && m == true {
+				match++
+			}
+		}
+		if match == len(ppf) {
 			if fo.ret != nil {
 				ret[pf] = matches[pf]
 			}
 			delete(matches, pf)
 		}
+		match = 0
 	}
 	matchesLock.Unlock()
 	if fo.ret != nil {
