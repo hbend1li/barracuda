@@ -1,11 +1,11 @@
 package main
 
 import (
-	"framagit.org/ppom/reaction/app"
+	"framagit.org/ppom/reaction/cmd"
 )
 
 func main() {
-	app.Main(version, commit)
+	cmd.Execute(version, commit)
 }
 
 var (

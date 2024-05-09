@@ -15,7 +15,7 @@ ip46tables: helpers_c/ip46tables.c
 nft46: helpers_c/nft46.c
 	$(CC) -s -static helpers_c/nft46.c -o nft46
 
-reaction: app/* reaction.go go.mod go.sum
+reaction: app/* cmd/* reaction.go go.mod go.sum
 	CGO_ENABLED=0 go build -buildvcs=false -ldflags "-s -X main.version=`git tag --sort=v:refname | tail -n1` -X main.commit=`git rev-parse --short HEAD`"
 
 reaction_%-1_amd64.deb:
